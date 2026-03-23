@@ -34,6 +34,9 @@ void *kViewModelKey = &kViewModelKey;
 static id dyyyRemoteConfigChangedToken = nil;
 static char kDYYYWeatherViewGestureInstalledKey;
 static char kDYYYWeatherSubviewGestureInstalledKey;
+static char kDYYYMainSettingsPageKey;
+static char kDYYYSearchBarInstalledKey;
+static char kDYYYOriginalSectionsKey;
 
 static void DYYYRemoveRemoteConfigObserver(void) {
     if (dyyyRemoteConfigChangedToken) {
@@ -46,6 +49,14 @@ static void DYYYRemoveRemoteConfigObserver(void) {
     return YES;
 }
 
+- (void)viewDidAppear:(BOOL)animated {
+    %orig;
+    if (!objc_getAssociatedObject(self, &kDYYYMainSettingsPageKey)) {
+        return;
+    }
+    [self dyyy_installSearchBarIfNeeded];
+}
+
 - (AWESettingBaseViewModel *)viewModel {
     AWESettingBaseViewModel *original = %orig;
     if (!original)
@@ -56,6 +67,107 @@ static void DYYYRemoveRemoteConfigObserver(void) {
 - (void)dealloc {
     DYYYRemoveRemoteConfigObserver();
     %orig;
+}
+
+%new
+- (void)dyyy_installSearchBarIfNeeded {
+    if (objc_getAssociatedObject(self, &kDYYYSearchBarInstalledKey)) {
+        return;
+    }
+
+    UITableView *tableView = self.tableView;
+    if (![tableView isKindOfClass:[UITableView class]]) {
+        return;
+    }
+
+    AWESettingsViewModel *viewModel = (AWESettingsViewModel *)[self viewModel];
+    if ([viewModel respondsToSelector:@selector(sectionDataArray)] && !objc_getAssociatedObject(self, &kDYYYOriginalSectionsKey)) {
+        NSArray *originalSections = [viewModel.sectionDataArray copy];
+        objc_setAssociatedObject(self, &kDYYYOriginalSectionsKey, originalSections, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+    }
+
+    UIView *headerView = [[UIView alloc] initWithFrame:CGRectMake(0, 0, tableView.bounds.size.width, 64)];
+    headerView.backgroundColor = UIColor.clearColor;
+
+    UIView *searchContainer = [[UIView alloc] initWithFrame:CGRectMake(16, 8, tableView.bounds.size.width - 32, 44)];
+    searchContainer.autoresizingMask = UIViewAutoresizingFlexibleWidth;
+    searchContainer.backgroundColor = [DYYYUtils isDarkMode] ? [UIColor colorWithWhite:0.14 alpha:1.0] : [UIColor whiteColor];
+    searchContainer.layer.cornerRadius = 14;
+    searchContainer.layer.masksToBounds = YES;
+
+    UIImageView *searchIcon = [[UIImageView alloc] initWithFrame:CGRectMake(14, 12, 20, 20)];
+    searchIcon.image = [UIImage systemImageNamed:@"magnifyingglass"];
+    searchIcon.tintColor = [UIColor colorWithWhite:0.6 alpha:1.0];
+    [searchContainer addSubview:searchIcon];
+
+    UITextField *searchField = [[UITextField alloc] initWithFrame:CGRectMake(42, 0, searchContainer.bounds.size.width - 56, searchContainer.bounds.size.height)];
+    searchField.autoresizingMask = UIViewAutoresizingFlexibleWidth;
+    searchField.placeholder = @"搜索 DYYY 功能";
+    searchField.clearButtonMode = UITextFieldViewModeWhileEditing;
+    searchField.textColor = [DYYYUtils isDarkMode] ? UIColor.whiteColor : UIColor.blackColor;
+    searchField.tintColor = [UIColor systemBlueColor];
+    [searchField addTarget:self action:@selector(dyyy_searchTextChanged:) forControlEvents:UIControlEventEditingChanged];
+    [searchContainer addSubview:searchField];
+
+    [headerView addSubview:searchContainer];
+    tableView.tableHeaderView = headerView;
+    objc_setAssociatedObject(self, &kDYYYSearchBarInstalledKey, @YES, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+}
+
+%new
+- (void)dyyy_searchTextChanged:(UITextField *)textField {
+    NSString *keyword = [[textField.text ?: @"" stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceAndNewlineCharacterSet]] lowercaseString];
+    NSArray *originalSections = objc_getAssociatedObject(self, &kDYYYOriginalSectionsKey);
+    if (![originalSections isKindOfClass:[NSArray class]]) {
+        return;
+    }
+
+    AWESettingsViewModel *viewModel = (AWESettingsViewModel *)[self viewModel];
+    if (![viewModel respondsToSelector:@selector(setSectionDataArray:)]) {
+        return;
+    }
+
+    if (keyword.length == 0) {
+        viewModel.sectionDataArray = originalSections;
+        [self.tableView reloadData];
+        return;
+    }
+
+    NSMutableArray *filteredSections = [NSMutableArray array];
+    for (AWESettingSectionModel *section in originalSections) {
+        NSArray *items = [section.itemArray isKindOfClass:[NSArray class]] ? section.itemArray : @[];
+        NSString *sectionTitle = [section.sectionHeaderTitle ?: @"" lowercaseString];
+        BOOL sectionMatched = [sectionTitle containsString:keyword];
+
+        NSMutableArray *matchedItems = [NSMutableArray array];
+        for (AWESettingItemModel *item in items) {
+            NSString *title = [item.title ?: @"" lowercaseString];
+            NSString *subTitle = [item.subTitle ?: @"" lowercaseString];
+            NSString *detail = [item.detail ?: @"" lowercaseString];
+            NSString *identifier = [item.identifier ?: @"" lowercaseString];
+            if (sectionMatched || [title containsString:keyword] || [subTitle containsString:keyword] || [detail containsString:keyword] || [identifier containsString:keyword]) {
+                [matchedItems addObject:item];
+            }
+        }
+
+        if (matchedItems.count == 0) {
+            continue;
+        }
+
+        AWESettingSectionModel *copiedSection = [[NSClassFromString(@"AWESettingSectionModel") alloc] init];
+        copiedSection.type = section.type;
+        copiedSection.sectionHeaderHeight = section.sectionHeaderHeight;
+        copiedSection.sectionHeaderTitle = section.sectionHeaderTitle;
+        copiedSection.sectionFooterTitle = section.sectionFooterTitle;
+        copiedSection.useNewFooterLayout = section.useNewFooterLayout;
+        copiedSection.identifier = section.identifier;
+        copiedSection.title = section.title;
+        copiedSection.itemArray = matchedItems;
+        [filteredSections addObject:copiedSection];
+    }
+
+    viewModel.sectionDataArray = filteredSections;
+    [self.tableView reloadData];
 }
 %end
 
@@ -220,6 +332,7 @@ extern "C"
 #endif
 void showDYYYSettingsVC(UIViewController *rootVC, BOOL hasAgreed) {
     AWESettingBaseViewController *settingsVC = [[%c(AWESettingBaseViewController) alloc] init];
+    objc_setAssociatedObject(settingsVC, &kDYYYMainSettingsPageKey, @YES, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
     if (!hasAgreed) {
         [DYYYSettingsHelper showAboutDialog:@"用户协议"
                                     message:@"本插件为开源项目\n仅供学习交流用途\n如有侵权请联系, GitHub 仓库：huami1314/DYYY\n请遵守当地法律法规, "
