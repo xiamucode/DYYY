@@ -4201,15 +4201,16 @@ static NSHashTable *processedParentViews = nil;
 - (void)layoutSubviews {
     %orig;
 
-    if (DYYYGetBool(@"DYYYHidePostView")) {
-        self.hidden = YES;
-        self.alpha = 0.0;
-        self.userInteractionEnabled = NO;
+    if (!DYYYGetBool(@"DYYYHidePostView")) return;
 
-        CGRect f = self.frame;
-        f.size.height = 0;
-        self.frame = f;
-    }
+    UIView *view = (UIView *)self;
+    view.hidden = YES;
+    view.alpha = 0.0;
+    view.userInteractionEnabled = NO;
+
+    CGRect f = view.frame;
+    f.size.height = 0;
+    view.frame = f;
 }
 
 %end
