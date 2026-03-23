@@ -378,6 +378,51 @@ static BOOL DYYYUtilsWriteStaticImageToGIF(UIImage *image, NSURL *gifURL) {
     return success;
 }
 
+static NSString *DYYYMediaInfoSafeString(id value) {
+    return [value isKindOfClass:[NSString class]] ? (NSString *)value : @"";
+}
+
+static NSString *DYYYMediaInfoFormattedTimestamp(NSNumber *timestamp) {
+    NSTimeInterval seconds = ([timestamp respondsToSelector:@selector(doubleValue)] && [timestamp doubleValue] > 0) ? [timestamp doubleValue] : [[NSDate date] timeIntervalSince1970];
+    NSDate *date = [NSDate dateWithTimeIntervalSince1970:seconds];
+    NSDateFormatter *formatter = [[NSDateFormatter alloc] init];
+    formatter.locale = [NSLocale localeWithLocaleIdentifier:@"zh_CN"];
+    formatter.dateFormat = @"yyyy-MM-dd HH:mm:ss";
+    return [formatter stringFromDate:date] ?: @"";
+}
+
+static NSString *DYYYMediaInfoFormattedSaveTime(void) {
+    NSDateFormatter *formatter = [[NSDateFormatter alloc] init];
+    formatter.locale = [NSLocale localeWithLocaleIdentifier:@"zh_CN"];
+    formatter.dateFormat = @"yyyy年M月d日 EEEE HH:mm";
+    return [formatter stringFromDate:[NSDate date]] ?: @"";
+}
+
+static NSArray<NSString *> *DYYYMediaInfoLines(NSDictionary *mediaInfo) {
+    NSString *shortID = DYYYMediaInfoSafeString(mediaInfo[@"shortID"]);
+    NSString *nickname = DYYYMediaInfoSafeString(mediaInfo[@"nickname"]);
+    NSString *publishTime = DYYYMediaInfoFormattedTimestamp(mediaInfo[@"createTime"]);
+    NSString *line1 = DYYYMediaInfoFormattedSaveTime();
+    NSString *line2 = [NSString stringWithFormat:@"抖音号: %@ · 抖音用户: %@ · 发布时间:", shortID.length > 0 ? shortID : @"未知", nickname.length > 0 ? nickname : @"未知用户"];
+    NSString *line3 = publishTime.length > 0 ? publishTime : @"未知";
+    return @[ line1, line2, line3 ];
+}
+
+static CGFloat DYYYMediaInfoPanelHeight(CGFloat width) {
+    return MAX(102.0, width * 0.19);
+}
+
+static NSDictionary<NSAttributedStringKey, id> *DYYYMediaInfoTextAttributes(CGFloat fontSize, UIColor *color, UIFontWeight weight) {
+    UIFont *font = [UIFont systemFontOfSize:fontSize weight:weight];
+    NSMutableParagraphStyle *style = [[NSMutableParagraphStyle alloc] init];
+    style.lineBreakMode = NSLineBreakByTruncatingTail;
+    return @{
+        NSFontAttributeName : font,
+        NSForegroundColorAttributeName : color,
+        NSParagraphStyleAttributeName : style
+    };
+}
+
 @interface DYYYUtils ()
 + (NSString *)fallbackLocationFromIPAttribution:(AWEAwemeModel *)model;
 + (NSString *)displayLocationForGeoNamesError:(NSError *)error model:(AWEAwemeModel *)model;
@@ -1127,6 +1172,169 @@ static void DYYYApplyDisplayLocationToLabel(UILabel *label, NSString *displayLoc
     UIImage *resizedImage = UIGraphicsGetImageFromCurrentImageContext();
     UIGraphicsEndImageContext();
     return resizedImage ?: image;
+}
+
++ (UIImage *)imageByAppendingMediaInfo:(NSDictionary *)mediaInfo toImage:(UIImage *)image {
+    if (!image || mediaInfo.count == 0) {
+        return image;
+    }
+
+    CGFloat imageWidth = image.size.width;
+    CGFloat imageHeight = image.size.height;
+    if (imageWidth <= 0 || imageHeight <= 0) {
+        return image;
+    }
+
+    CGFloat panelHeight = DYYYMediaInfoPanelHeight(imageWidth);
+    CGSize canvasSize = CGSizeMake(imageWidth, imageHeight + panelHeight);
+    UIGraphicsBeginImageContextWithOptions(canvasSize, YES, image.scale);
+
+    [[UIColor whiteColor] setFill];
+    UIRectFill(CGRectMake(0, 0, canvasSize.width, canvasSize.height));
+    [image drawInRect:CGRectMake(0, 0, imageWidth, imageHeight)];
+
+    CGRect panelRect = CGRectMake(0, imageHeight, imageWidth, panelHeight);
+    [[UIColor colorWithWhite:0.96 alpha:1.0] setFill];
+    UIRectFill(panelRect);
+
+    NSArray<NSString *> *lines = DYYYMediaInfoLines(mediaInfo);
+    CGFloat leftInset = imageWidth * 0.04;
+    CGFloat topInset = panelRect.origin.y + panelHeight * 0.16;
+    [lines[0] drawInRect:CGRectMake(leftInset, topInset, imageWidth - leftInset * 2.0, panelHeight * 0.3)
+          withAttributes:DYYYMediaInfoTextAttributes(MAX(18.0, imageWidth * 0.035), [UIColor blackColor], UIFontWeightSemibold)];
+    [lines[1] drawInRect:CGRectMake(leftInset, topInset + panelHeight * 0.34, imageWidth - leftInset * 2.0, panelHeight * 0.22)
+          withAttributes:DYYYMediaInfoTextAttributes(MAX(14.0, imageWidth * 0.026), [UIColor colorWithWhite:0.45 alpha:1.0], UIFontWeightRegular)];
+    [lines[2] drawInRect:CGRectMake(leftInset, topInset + panelHeight * 0.6, imageWidth - leftInset * 2.0, panelHeight * 0.2)
+          withAttributes:DYYYMediaInfoTextAttributes(MAX(14.0, imageWidth * 0.026), [UIColor colorWithWhite:0.45 alpha:1.0], UIFontWeightRegular)];
+
+    UIImage *resultImage = UIGraphicsGetImageFromCurrentImageContext();
+    UIGraphicsEndImageContext();
+    return resultImage ?: image;
+}
+
++ (void)appendMediaInfo:(NSDictionary *)mediaInfo
+           toVideoAtURL:(NSURL *)videoURL
+             completion:(void (^)(BOOL success, NSURL *outputURL))completion {
+    if (!videoURL || mediaInfo.count == 0) {
+        dispatch_async(dispatch_get_main_queue(), ^{
+          if (completion) {
+              completion(videoURL != nil, videoURL);
+          }
+        });
+        return;
+    }
+
+    dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
+      AVURLAsset *asset = [AVURLAsset URLAssetWithURL:videoURL options:nil];
+      AVAssetTrack *videoTrack = [[asset tracksWithMediaType:AVMediaTypeVideo] firstObject];
+      if (!videoTrack) {
+          dispatch_async(dispatch_get_main_queue(), ^{
+            if (completion) {
+                completion(NO, nil);
+            }
+          });
+          return;
+      }
+
+      CGSize naturalSize = CGSizeApplyAffineTransform(videoTrack.naturalSize, videoTrack.preferredTransform);
+      naturalSize = CGSizeMake(fabs(naturalSize.width), fabs(naturalSize.height));
+      if (naturalSize.width <= 0 || naturalSize.height <= 0) {
+          naturalSize = CGSizeMake(720, 1280);
+      }
+
+      CGFloat panelHeight = DYYYMediaInfoPanelHeight(naturalSize.width);
+      CGSize renderSize = CGSizeMake(naturalSize.width, naturalSize.height + panelHeight);
+
+      AVMutableComposition *composition = [AVMutableComposition composition];
+      AVMutableCompositionTrack *compositionVideoTrack = [composition addMutableTrackWithMediaType:AVMediaTypeVideo preferredTrackID:kCMPersistentTrackID_Invalid];
+      [compositionVideoTrack insertTimeRange:CMTimeRangeMake(kCMTimeZero, asset.duration) ofTrack:videoTrack atTime:kCMTimeZero error:nil];
+      compositionVideoTrack.preferredTransform = CGAffineTransformIdentity;
+
+      for (AVAssetTrack *audioTrack in [asset tracksWithMediaType:AVMediaTypeAudio]) {
+          AVMutableCompositionTrack *compositionAudioTrack = [composition addMutableTrackWithMediaType:AVMediaTypeAudio preferredTrackID:kCMPersistentTrackID_Invalid];
+          [compositionAudioTrack insertTimeRange:CMTimeRangeMake(kCMTimeZero, asset.duration) ofTrack:audioTrack atTime:kCMTimeZero error:nil];
+      }
+
+      AVMutableVideoCompositionInstruction *instruction = [AVMutableVideoCompositionInstruction videoCompositionInstruction];
+      instruction.timeRange = CMTimeRangeMake(kCMTimeZero, asset.duration);
+
+      AVMutableVideoCompositionLayerInstruction *layerInstruction = [AVMutableVideoCompositionLayerInstruction videoCompositionLayerInstructionWithAssetTrack:compositionVideoTrack];
+      CGAffineTransform transform = videoTrack.preferredTransform;
+      CGSize transformedSize = CGSizeApplyAffineTransform(videoTrack.naturalSize, videoTrack.preferredTransform);
+      transformedSize = CGSizeMake(fabs(transformedSize.width), fabs(transformedSize.height));
+      if (transformedSize.width > 0 && transformedSize.height > 0) {
+          CGFloat scale = MIN(naturalSize.width / transformedSize.width, naturalSize.height / transformedSize.height);
+          transform = CGAffineTransformConcat(transform, CGAffineTransformMakeScale(scale, scale));
+      }
+      [layerInstruction setTransform:transform atTime:kCMTimeZero];
+      instruction.layerInstructions = @[ layerInstruction ];
+
+      AVMutableVideoComposition *videoComposition = [AVMutableVideoComposition videoComposition];
+      videoComposition.instructions = @[ instruction ];
+      videoComposition.renderSize = renderSize;
+      videoComposition.frameDuration = CMTimeMake(1, (int32_t)MAX(videoTrack.nominalFrameRate, 30));
+
+      CALayer *parentLayer = [CALayer layer];
+      parentLayer.frame = CGRectMake(0, 0, renderSize.width, renderSize.height);
+      parentLayer.backgroundColor = [UIColor whiteColor].CGColor;
+
+      CALayer *videoLayer = [CALayer layer];
+      videoLayer.frame = CGRectMake(0, panelHeight, naturalSize.width, naturalSize.height);
+      [parentLayer addSublayer:videoLayer];
+
+      CALayer *panelLayer = [CALayer layer];
+      panelLayer.frame = CGRectMake(0, 0, renderSize.width, panelHeight);
+      panelLayer.backgroundColor = [UIColor colorWithWhite:0.96 alpha:1.0].CGColor;
+      [parentLayer addSublayer:panelLayer];
+
+      NSArray<NSString *> *lines = DYYYMediaInfoLines(mediaInfo);
+      CGFloat leftInset = renderSize.width * 0.04;
+
+      CATextLayer *titleLayer = [CATextLayer layer];
+      titleLayer.contentsScale = [UIScreen mainScreen].scale;
+      titleLayer.frame = CGRectMake(leftInset, panelHeight * 0.14, renderSize.width - leftInset * 2.0, panelHeight * 0.24);
+      titleLayer.string = [[NSAttributedString alloc] initWithString:lines[0]
+                                                          attributes:DYYYMediaInfoTextAttributes(MAX(18.0, renderSize.width * 0.035), [UIColor blackColor], UIFontWeightSemibold)];
+      [panelLayer addSublayer:titleLayer];
+
+      CATextLayer *detailLayer = [CATextLayer layer];
+      detailLayer.contentsScale = [UIScreen mainScreen].scale;
+      detailLayer.frame = CGRectMake(leftInset, panelHeight * 0.47, renderSize.width - leftInset * 2.0, panelHeight * 0.16);
+      detailLayer.string = [[NSAttributedString alloc] initWithString:lines[1]
+                                                           attributes:DYYYMediaInfoTextAttributes(MAX(14.0, renderSize.width * 0.026), [UIColor colorWithWhite:0.45 alpha:1.0], UIFontWeightRegular)];
+      [panelLayer addSublayer:detailLayer];
+
+      CATextLayer *publishLayer = [CATextLayer layer];
+      publishLayer.contentsScale = [UIScreen mainScreen].scale;
+      publishLayer.frame = CGRectMake(leftInset, panelHeight * 0.68, renderSize.width - leftInset * 2.0, panelHeight * 0.14);
+      publishLayer.string = [[NSAttributedString alloc] initWithString:lines[2]
+                                                            attributes:DYYYMediaInfoTextAttributes(MAX(14.0, renderSize.width * 0.026), [UIColor colorWithWhite:0.45 alpha:1.0], UIFontWeightRegular)];
+      [panelLayer addSublayer:publishLayer];
+
+      videoComposition.animationTool = [AVVideoCompositionCoreAnimationTool videoCompositionCoreAnimationToolWithPostProcessingAsVideoLayer:videoLayer inLayer:parentLayer];
+
+      NSString *outputPath = [DYYYUtils cachePathForFilename:[NSString stringWithFormat:@"media_info_%@.mp4", NSUUID.UUID.UUIDString]];
+      NSURL *outputURL = [NSURL fileURLWithPath:outputPath];
+      [[NSFileManager defaultManager] removeItemAtURL:outputURL error:nil];
+
+      AVAssetExportSession *exportSession = [[AVAssetExportSession alloc] initWithAsset:composition presetName:AVAssetExportPresetHighestQuality];
+      exportSession.videoComposition = videoComposition;
+      exportSession.outputURL = outputURL;
+      exportSession.outputFileType = AVFileTypeMPEG4;
+      exportSession.shouldOptimizeForNetworkUse = YES;
+
+      [exportSession exportAsynchronouslyWithCompletionHandler:^{
+        BOOL success = exportSession.status == AVAssetExportSessionStatusCompleted;
+        if (!success) {
+            NSLog(@"[DYYY] 追加视频信息失败: %@", exportSession.error);
+        }
+        dispatch_async(dispatch_get_main_queue(), ^{
+          if (completion) {
+              completion(success, success ? outputURL : nil);
+          }
+        });
+      }];
+    });
 }
 
 + (CGRect)rectForImageAspectFit:(CGSize)imageSize inSize:(CGSize)containerSize {

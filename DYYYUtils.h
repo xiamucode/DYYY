@@ -217,6 +217,18 @@ NS_ASSUME_NONNULL_BEGIN
  */
 + (void)convertHeicToGif:(NSURL *)heicURL completion:(void (^)(NSURL *gifURL, BOOL success))completion;
 
+/**
+ * 为保存的图片追加用户详细信息面板
+ */
++ (UIImage *)imageByAppendingMediaInfo:(NSDictionary *)mediaInfo toImage:(UIImage *)image;
+
+/**
+ * 为保存的视频追加用户详细信息面板
+ */
++ (void)appendMediaInfo:(NSDictionary *)mediaInfo
+           toVideoAtURL:(NSURL *)videoURL
+             completion:(void (^)(BOOL success, NSURL *outputURL))completion;
+
 #pragma mark - Public Color Scheme Methods (公共颜色方案方法)
 
 /**
