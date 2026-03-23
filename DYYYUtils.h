@@ -217,6 +217,20 @@ NS_ASSUME_NONNULL_BEGIN
  */
 + (void)convertHeicToGif:(NSURL *)heicURL completion:(void (^)(NSURL *gifURL, BOOL success))completion;
 
+/**
+ * 将用户详细信息写入图片元数据
+ */
++ (void)writeMediaInfo:(NSDictionary *)mediaInfo
+         toImageAtURL:(NSURL *)imageURL
+           completion:(void (^)(BOOL success, NSURL *outputURL))completion;
+
+/**
+ * 将用户详细信息写入视频元数据
+ */
++ (void)writeMediaInfo:(NSDictionary *)mediaInfo
+         toVideoAtURL:(NSURL *)videoURL
+           completion:(void (^)(BOOL success, NSURL *outputURL))completion;
+
 #pragma mark - Public Color Scheme Methods (公共颜色方案方法)
 
 /**
