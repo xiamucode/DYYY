@@ -44,6 +44,7 @@ typedef NS_ENUM(NSUInteger, DYEdgeMode) {
 
 @interface URLModel : NSObject
 @property(nonatomic, strong) NSArray *originURLList;
+- (NSURL *)getDYYYSrcURLDownload;
 @end
 
 @interface DUXToast : NSObject
