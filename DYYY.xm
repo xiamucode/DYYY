@@ -4195,6 +4195,24 @@ static NSHashTable *processedParentViews = nil;
 }
 %end
 
+%hook AWEUserProfileUGCContributionGuideEmptyCollectionViewCell
+
+- (void)layoutSubviews {
+    %orig;
+
+    if (DYYYGetBool(@"DYYYHidePostView")) {
+        self.hidden = YES;
+        self.alpha = 0.0;
+        self.userInteractionEnabled = NO;
+
+        CGRect f = self.frame;
+        f.size.height = 0;
+        self.frame = f;
+    }
+}
+
+%end
+
 // 隐藏关注直播顶端的直播视图
 %hook AWENewLiveSkylightViewController
 
