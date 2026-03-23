@@ -34,6 +34,382 @@ void *kViewModelKey = &kViewModelKey;
 static id dyyyRemoteConfigChangedToken = nil;
 static char kDYYYWeatherViewGestureInstalledKey;
 static char kDYYYWeatherSubviewGestureInstalledKey;
+static char kDYYYMainSettingsPageKey;
+static char kDYYYSearchBarInstalledKey;
+static char kDYYYOriginalSectionsKey;
+static char kDYYYSearchTargetSectionKey;
+static char kDYYYSearchTargetTitleKey;
+
+
+static BOOL DYYYSearchTextContainsKeyword(NSString *text, NSString *keyword) {
+    return text.length > 0 && [text.lowercaseString containsString:keyword];
+}
+
+static NSArray<NSDictionary<NSString *, NSString *> *> *DYYYSearchManifest(void) {
+    static NSArray<NSDictionary<NSString *, NSString *> *> *manifest = nil;
+    static dispatch_once_t onceToken;
+    dispatch_once(&onceToken, ^{
+        manifest = @[
+        @{@"category": @"基本设置", @"section": @"外观设置", @"title": @"启用弹幕改色"},
+        @{@"category": @"基本设置", @"section": @"外观设置", @"title": @"自定弹幕颜色"},
+        @{@"category": @"基本设置", @"section": @"外观设置", @"title": @"旋转彩虹弹幕"},
+        @{@"category": @"基本设置", @"section": @"视频播放设置", @"title": @"视频背景颜色"},
+        @{@"category": @"基本设置", @"section": @"视频播放设置", @"title": @"显示进度时长"},
+        @{@"category": @"基本设置", @"section": @"视频播放设置", @"title": @"进度时长样式"},
+        @{@"category": @"基本设置", @"section": @"视频播放设置", @"title": @"进度标签颜色"},
+        @{@"category": @"基本设置", @"section": @"视频播放设置", @"title": @"进度纵轴位置"},
+        @{@"category": @"基本设置", @"section": @"视频播放设置", @"title": @"隐藏视频进度"},
+        @{@"category": @"基本设置", @"section": @"视频播放设置", @"title": @"启用自动播放"},
+        @{@"category": @"基本设置", @"section": @"视频播放设置", @"title": @"启用后台播放"},
+        @{@"category": @"基本设置", @"section": @"视频播放设置", @"title": @"忽略投屏 VPN 检测"},
+        @{@"category": @"基本设置", @"section": @"视频播放设置", @"title": @"设置默认倍速"},
+        @{@"category": @"基本设置", @"section": @"视频播放设置", @"title": @"设置长按倍速"},
+        @{@"category": @"基本设置", @"section": @"视频播放设置", @"title": @"上下控制倍速"},
+        @{@"category": @"基本设置", @"section": @"视频播放设置", @"title": @"时间属地显示"},
+        @{@"category": @"基本设置", @"section": @"视频播放设置", @"title": @"国外解析账号"},
+        @{@"category": @"基本设置", @"section": @"视频播放设置", @"title": @"文案标签样式"},
+        @{@"category": @"基本设置", @"section": @"视频播放设置", @"title": @"属地标签颜色"},
+        @{@"category": @"基本设置", @"section": @"视频播放设置", @"title": @"属地随机渐变"},
+        @{@"category": @"基本设置", @"section": @"杂项设置", @"title": @"默认直播画质"},
+        @{@"category": @"基本设置", @"section": @"杂项设置", @"title": @"直播真实人数"},
+        @{@"category": @"基本设置", @"section": @"杂项设置", @"title": @"评论具体时间"},
+        @{@"category": @"基本设置", @"section": @"杂项设置", @"title": @"提高视频画质"},
+        @{@"category": @"基本设置", @"section": @"杂项设置", @"title": @"隐藏系统顶栏"},
+        @{@"category": @"基本设置", @"section": @"杂项设置", @"title": @"启用首页净化"},
+        @{@"category": @"基本设置", @"section": @"杂项设置", @"title": @"启用首页全屏"},
+        @{@"category": @"基本设置", @"section": @"过滤与屏蔽", @"title": @"推荐过滤直播"},
+        @{@"category": @"基本设置", @"section": @"过滤与屏蔽", @"title": @"全部过滤直播"},
+        @{@"category": @"基本设置", @"section": @"过滤与屏蔽", @"title": @"推荐过滤热点"},
+        @{@"category": @"基本设置", @"section": @"过滤与屏蔽", @"title": @"推荐过滤图文"},
+        @{@"category": @"基本设置", @"section": @"过滤与屏蔽", @"title": @"推荐过滤文字"},
+        @{@"category": @"基本设置", @"section": @"过滤与屏蔽", @"title": @"推荐过滤音乐"},
+        @{@"category": @"基本设置", @"section": @"过滤与屏蔽", @"title": @"推荐过滤AI互动"},
+        @{@"category": @"基本设置", @"section": @"过滤与屏蔽", @"title": @"推荐过滤低赞"},
+        @{@"category": @"基本设置", @"section": @"过滤与屏蔽", @"title": @"推荐过滤用户"},
+        @{@"category": @"基本设置", @"section": @"过滤与屏蔽", @"title": @"推荐过滤文案"},
+        @{@"category": @"基本设置", @"section": @"过滤与屏蔽", @"title": @"推荐过滤拍同款"},
+        @{@"category": @"基本设置", @"section": @"过滤与屏蔽", @"title": @"推荐视频时限"},
+        @{@"category": @"基本设置", @"section": @"过滤与屏蔽", @"title": @"推荐过滤HDR"},
+        @{@"category": @"基本设置", @"section": @"过滤与屏蔽", @"title": @"启用屏蔽广告"},
+        @{@"category": @"基本设置", @"section": @"过滤与屏蔽", @"title": @"移除青少年弹窗"},
+        @{@"category": @"基本设置", @"section": @"过滤与屏蔽", @"title": @"屏蔽抖音检测更新"},
+        @{@"category": @"基本设置", @"section": @"过滤与屏蔽", @"title": @"屏蔽直播PCDN功能"},
+        @{@"category": @"基本设置", @"section": @"二次确认", @"title": @"关注二次确认"},
+        @{@"category": @"基本设置", @"section": @"二次确认", @"title": @"收藏二次确认"},
+        @{@"category": @"界面设置", @"section": @"透明度设置", @"title": @"设置顶栏透明"},
+        @{@"category": @"界面设置", @"section": @"透明度设置", @"title": @"设置全局透明"},
+        @{@"category": @"界面设置", @"section": @"透明度设置", @"title": @"首页头像透明"},
+        @{@"category": @"界面设置", @"section": @"透明度设置", @"title": @"评论区毛玻璃"},
+        @{@"category": @"界面设置", @"section": @"透明度设置", @"title": @"通知栏毛玻璃"},
+        @{@"category": @"界面设置", @"section": @"透明度设置", @"title": @"通知圆角半径"},
+        @{@"category": @"界面设置", @"section": @"透明度设置", @"title": @"毛玻璃透明度"},
+        @{@"category": @"界面设置", @"section": @"缩放与大小", @"title": @"右侧栏缩放度"},
+        @{@"category": @"界面设置", @"section": @"缩放与大小", @"title": @"昵称文案缩放"},
+        @{@"category": @"界面设置", @"section": @"缩放与大小", @"title": @"昵称下移距离"},
+        @{@"category": @"界面设置", @"section": @"缩放与大小", @"title": @"文案下移距离"},
+        @{@"category": @"界面设置", @"section": @"缩放与大小", @"title": @"属地上移距离"},
+        @{@"category": @"界面设置", @"section": @"缩放与大小", @"title": @"修改底栏高度"},
+        @{@"category": @"界面设置", @"section": @"标题自定义", @"title": @"设置顶栏标题"},
+        @{@"category": @"界面设置", @"section": @"标题自定义", @"title": @"设置首页标题"},
+        @{@"category": @"界面设置", @"section": @"标题自定义", @"title": @"设置朋友标题"},
+        @{@"category": @"界面设置", @"section": @"标题自定义", @"title": @"设置消息标题"},
+        @{@"category": @"界面设置", @"section": @"标题自定义", @"title": @"设置我的标题"},
+        @{@"category": @"界面设置", @"section": @"标题自定义", @"title": @"设置评论填充"},
+        @{@"category": @"隐藏设置", @"section": @"主界面元素", @"title": @"隐藏底栏背景"},
+        @{@"category": @"隐藏设置", @"section": @"主界面元素", @"title": @"隐藏底栏红点"},
+        @{@"category": @"隐藏设置", @"section": @"主界面元素", @"title": @"隐藏双列箭头"},
+        @{@"category": @"隐藏设置", @"section": @"主界面元素", @"title": @"隐藏底栏商城"},
+        @{@"category": @"隐藏设置", @"section": @"主界面元素", @"title": @"隐藏底栏消息"},
+        @{@"category": @"隐藏设置", @"section": @"主界面元素", @"title": @"隐藏底栏朋友"},
+        @{@"category": @"隐藏设置", @"section": @"主界面元素", @"title": @"隐藏底栏加号"},
+        @{@"category": @"隐藏设置", @"section": @"主界面元素", @"title": @"隐藏底栏我的"},
+        @{@"category": @"隐藏设置", @"section": @"主界面元素", @"title": @"隐藏底栏评论"},
+        @{@"category": @"隐藏设置", @"section": @"主界面元素", @"title": @"隐藏底栏热榜"},
+        @{@"category": @"隐藏设置", @"section": @"主界面元素", @"title": @"精简平板底栏"},
+        @{@"category": @"隐藏设置", @"section": @"主界面元素", @"title": @"隐藏顶栏红点"},
+        @{@"category": @"隐藏设置", @"section": @"视频播放界面", @"title": @"隐藏全屏观看"},
+        @{@"category": @"隐藏设置", @"section": @"视频播放界面", @"title": @"移除全屏观看"},
+        @{@"category": @"隐藏设置", @"section": @"视频播放界面", @"title": @"隐藏头像加号"},
+        @{@"category": @"隐藏设置", @"section": @"视频播放界面", @"title": @"移除头像加号"},
+        @{@"category": @"隐藏设置", @"section": @"视频播放界面", @"title": @"隐藏点赞数值"},
+        @{@"category": @"隐藏设置", @"section": @"视频播放界面", @"title": @"隐藏评论数值"},
+        @{@"category": @"隐藏设置", @"section": @"视频播放界面", @"title": @"隐藏收藏数值"},
+        @{@"category": @"隐藏设置", @"section": @"视频播放界面", @"title": @"隐藏分享数值"},
+        @{@"category": @"隐藏设置", @"section": @"视频播放界面", @"title": @"隐藏点赞按钮"},
+        @{@"category": @"隐藏设置", @"section": @"视频播放界面", @"title": @"隐藏评论按钮"},
+        @{@"category": @"隐藏设置", @"section": @"视频播放界面", @"title": @"隐藏收藏按钮"},
+        @{@"category": @"隐藏设置", @"section": @"视频播放界面", @"title": @"隐藏分享按钮"},
+        @{@"category": @"隐藏设置", @"section": @"视频播放界面", @"title": @"隐藏头像按钮"},
+        @{@"category": @"隐藏设置", @"section": @"视频播放界面", @"title": @"隐藏头像光圈"},
+        @{@"category": @"隐藏设置", @"section": @"视频播放界面", @"title": @"隐藏头像直播提示"},
+        @{@"category": @"隐藏设置", @"section": @"视频播放界面", @"title": @"隐藏音乐按钮"},
+        @{@"category": @"隐藏设置", @"section": @"视频播放界面", @"title": @"隐藏遮罩效果"},
+        @{@"category": @"隐藏设置", @"section": @"视频播放界面", @"title": @"隐藏返回按钮"},
+        @{@"category": @"隐藏设置", @"section": @"侧边栏", @"title": @"隐藏常用小程序"},
+        @{@"category": @"隐藏设置", @"section": @"侧边栏", @"title": @"隐藏常访问的人"},
+        @{@"category": @"隐藏设置", @"section": @"侧边栏", @"title": @"隐藏侧栏红点"},
+        @{@"category": @"隐藏设置", @"section": @"侧边栏", @"title": @"隐藏左侧边栏"},
+        @{@"category": @"隐藏设置", @"section": @"消息页与我的页", @"title": @"隐藏通知权限提示"},
+        @{@"category": @"隐藏设置", @"section": @"消息页与我的页", @"title": @"隐藏消息顶栏红包"},
+        @{@"category": @"隐藏设置", @"section": @"消息页与我的页", @"title": @"隐藏消息头像列表"},
+        @{@"category": @"隐藏设置", @"section": @"消息页与我的页", @"title": @"隐藏消息头像气泡"},
+        @{@"category": @"隐藏设置", @"section": @"消息页与我的页", @"title": @"隐藏我的添加朋友"},
+        @{@"category": @"隐藏设置", @"section": @"消息页与我的页", @"title": @"隐藏朋友日常按钮"},
+        @{@"category": @"隐藏设置", @"section": @"消息页与我的页", @"title": @"隐藏群聊商店按钮"},
+        @{@"category": @"隐藏设置", @"section": @"消息页与我的页", @"title": @"隐藏群头像直播中"},
+        @{@"category": @"隐藏设置", @"section": @"消息页与我的页", @"title": @"隐藏聊天页工具栏"},
+        @{@"category": @"隐藏设置", @"section": @"消息页与我的页", @"title": @"隐藏底部私信回复"},
+        @{@"category": @"隐藏设置", @"section": @"消息页与我的页", @"title": @"隐藏我的页发作品"},
+        @{@"category": @"隐藏设置", @"section": @"提示与位置信息", @"title": @"隐藏关注顶端"},
+        @{@"category": @"隐藏设置", @"section": @"提示与位置信息", @"title": @"隐藏关注直播"},
+        @{@"category": @"隐藏设置", @"section": @"提示与位置信息", @"title": @"隐藏同城顶端"},
+        @{@"category": @"隐藏设置", @"section": @"提示与位置信息", @"title": @"隐藏吃喝玩乐"},
+        @{@"category": @"隐藏设置", @"section": @"提示与位置信息", @"title": @"隐藏右上搜索"},
+        @{@"category": @"隐藏设置", @"section": @"提示与位置信息", @"title": @"隐藏评论搜索"},
+        @{@"category": @"隐藏设置", @"section": @"提示与位置信息", @"title": @"隐藏相关搜索"},
+        @{@"category": @"隐藏设置", @"section": @"提示与位置信息", @"title": @"隐藏弹出热搜"},
+        @{@"category": @"隐藏设置", @"section": @"提示与位置信息", @"title": @"隐藏搜索同款"},
+        @{@"category": @"隐藏设置", @"section": @"提示与位置信息", @"title": @"隐藏顶部搜索框"},
+        @{@"category": @"隐藏设置", @"section": @"提示与位置信息", @"title": @"隐藏搜索框背景"},
+        @{@"category": @"隐藏设置", @"section": @"提示与位置信息", @"title": @"隐藏弹幕按钮"},
+        @{@"category": @"隐藏设置", @"section": @"提示与位置信息", @"title": @"隐藏静音按钮"},
+        @{@"category": @"隐藏设置", @"section": @"提示与位置信息", @"title": @"隐藏去汽水听"},
+        @{@"category": @"隐藏设置", @"section": @"提示与位置信息", @"title": @"屏蔽共创信息"},
+        @{@"category": @"隐藏设置", @"section": @"提示与位置信息", @"title": @"隐藏热点提示"},
+        @{@"category": @"隐藏设置", @"section": @"提示与位置信息", @"title": @"隐藏推荐提示"},
+        @{@"category": @"隐藏设置", @"section": @"提示与位置信息", @"title": @"隐藏底部相关"},
+        @{@"category": @"隐藏设置", @"section": @"提示与位置信息", @"title": @"隐藏分享提示"},
+        @{@"category": @"隐藏设置", @"section": @"提示与位置信息", @"title": @"隐藏作者声明及风险提示"},
+        @{@"category": @"隐藏设置", @"section": @"提示与位置信息", @"title": @"隐藏视频锚点"},
+        @{@"category": @"隐藏设置", @"section": @"提示与位置信息", @"title": @"隐藏视频定位"},
+        @{@"category": @"隐藏设置", @"section": @"提示与位置信息", @"title": @"隐藏挑战贴纸"},
+        @{@"category": @"隐藏设置", @"section": @"提示与位置信息", @"title": @"隐藏互动贴纸"},
+        @{@"category": @"隐藏设置", @"section": @"提示与位置信息", @"title": @"隐藏精选标签"},
+        @{@"category": @"隐藏设置", @"section": @"提示与位置信息", @"title": @"隐藏好友推荐"},
+        @{@"category": @"隐藏设置", @"section": @"提示与位置信息", @"title": @"隐藏校园提示"},
+        @{@"category": @"隐藏设置", @"section": @"提示与位置信息", @"title": @"隐藏作者店铺"},
+        @{@"category": @"隐藏设置", @"section": @"提示与位置信息", @"title": @"隐藏顶栏横线"},
+        @{@"category": @"隐藏设置", @"section": @"提示与位置信息", @"title": @"隐藏视频合集"},
+        @{@"category": @"隐藏设置", @"section": @"提示与位置信息", @"title": @"隐藏短剧合集"},
+        @{@"category": @"隐藏设置", @"section": @"提示与位置信息", @"title": @"隐藏动图标签"},
+        @{@"category": @"隐藏设置", @"section": @"提示与位置信息", @"title": @"隐藏笔记标签"},
+        @{@"category": @"隐藏设置", @"section": @"提示与位置信息", @"title": @"隐藏底部互动"},
+        @{@"category": @"隐藏设置", @"section": @"提示与位置信息", @"title": @"隐藏相机定位"},
+        @{@"category": @"隐藏设置", @"section": @"提示与位置信息", @"title": @"隐藏评论视图"},
+        @{@"category": @"隐藏设置", @"section": @"提示与位置信息", @"title": @"隐藏评论提示"},
+        @{@"category": @"隐藏设置", @"section": @"提示与位置信息", @"title": @"隐藏直播提示"},
+        @{@"category": @"隐藏设置", @"section": @"提示与位置信息", @"title": @"隐藏视频滑条"},
+        @{@"category": @"隐藏设置", @"section": @"提示与位置信息", @"title": @"隐藏图片滑条"},
+        @{@"category": @"隐藏设置", @"section": @"提示与位置信息", @"title": @"隐藏章节进度"},
+        @{@"category": @"隐藏设置", @"section": @"提示与位置信息", @"title": @"隐藏上次看到"},
+        @{@"category": @"隐藏设置", @"section": @"提示与位置信息", @"title": @"隐藏分享私信"},
+        @{@"category": @"隐藏设置", @"section": @"提示与位置信息", @"title": @"隐藏昵称右侧"},
+        @{@"category": @"隐藏设置", @"section": @"提示与位置信息", @"title": @"隐藏红包悬浮"},
+        @{@"category": @"隐藏设置", @"section": @"提示与位置信息", @"title": @"隐藏输入扫码"},
+        @{@"category": @"隐藏设置", @"section": @"提示与位置信息", @"title": @"隐藏暂停相关"},
+        @{@"category": @"隐藏设置", @"section": @"提示与位置信息", @"title": @"隐藏键盘 AI"},
+        @{@"category": @"隐藏设置", @"section": @"直播界面净化", @"title": @"隐藏直播广场"},
+        @{@"category": @"隐藏设置", @"section": @"直播界面净化", @"title": @"隐藏进入直播"},
+        @{@"category": @"隐藏设置", @"section": @"直播界面净化", @"title": @"隐藏关闭按钮"},
+        @{@"category": @"隐藏设置", @"section": @"直播界面净化", @"title": @"隐藏横屏按钮"},
+        @{@"category": @"隐藏设置", @"section": @"直播界面净化", @"title": @"隐藏礼物展馆"},
+        @{@"category": @"隐藏设置", @"section": @"直播界面净化", @"title": @"隐藏退出清屏"},
+        @{@"category": @"隐藏设置", @"section": @"直播界面净化", @"title": @"隐藏投屏按钮"},
+        @{@"category": @"隐藏设置", @"section": @"直播界面净化", @"title": @"隐藏直播发现"},
+        @{@"category": @"隐藏设置", @"section": @"直播界面净化", @"title": @"隐藏直播热榜"},
+        @{@"category": @"隐藏设置", @"section": @"直播界面净化", @"title": @"隐藏红包悬浮"},
+        @{@"category": @"隐藏设置", @"section": @"直播界面净化", @"title": @"隐藏直播点歌"},
+        @{@"category": @"隐藏设置", @"section": @"直播界面净化", @"title": @"隐藏商品推广"},
+        @{@"category": @"隐藏设置", @"section": @"直播界面净化", @"title": @"隐藏点赞动画"},
+        @{@"category": @"隐藏设置", @"section": @"直播界面净化", @"title": @"隐藏进场特效"},
+        @{@"category": @"隐藏设置", @"section": @"直播界面净化", @"title": @"隐藏滚动弹幕"},
+        @{@"category": @"隐藏设置", @"section": @"直播界面净化", @"title": @"隐藏大家在说"},
+        @{@"category": @"隐藏设置", @"section": @"直播界面净化", @"title": @"隐藏文字贴纸"},
+        @{@"category": @"隐藏设置", @"section": @"直播界面净化", @"title": @"隐藏礼物挑战"},
+        @{@"category": @"隐藏设置", @"section": @"直播界面净化", @"title": @"隐藏流量提醒"},
+        @{@"category": @"隐藏设置", @"section": @"长按面板", @"title": @"精简长按面板"},
+        @{@"category": @"隐藏设置", @"section": @"长按面板", @"title": @"隐藏面板项目"},
+        @{@"category": @"隐藏设置", @"section": @"长按面板", @"title": @"隐藏评论分享"},
+        @{@"category": @"隐藏设置", @"section": @"长按面板", @"title": @"隐藏评论复制"},
+        @{@"category": @"隐藏设置", @"section": @"长按面板", @"title": @"隐藏评论保存"},
+        @{@"category": @"隐藏设置", @"section": @"长按面板", @"title": @"隐藏评论举报"},
+        @{@"category": @"隐藏设置", @"section": @"长按面板", @"title": @"隐藏评论搜索"},
+        @{@"category": @"隐藏设置", @"section": @"长按面板", @"title": @"隐藏评论转发日常"},
+        @{@"category": @"隐藏设置", @"section": @"长按面板", @"title": @"隐藏评论视频回复"},
+        @{@"category": @"隐藏设置", @"section": @"长按面板", @"title": @"隐藏评论识别图片"},
+        @{@"category": @"顶栏移除", @"section": @"", @"title": @"移除推荐"},
+        @{@"category": @"顶栏移除", @"section": @"", @"title": @"移除朋友"},
+        @{@"category": @"顶栏移除", @"section": @"", @"title": @"移除关注"},
+        @{@"category": @"顶栏移除", @"section": @"", @"title": @"移除精选"},
+        @{@"category": @"顶栏移除", @"section": @"", @"title": @"移除商城"},
+        @{@"category": @"顶栏移除", @"section": @"", @"title": @"移除同城"},
+        @{@"category": @"顶栏移除", @"section": @"", @"title": @"移除团购"},
+        @{@"category": @"顶栏移除", @"section": @"", @"title": @"移除直播"},
+        @{@"category": @"顶栏移除", @"section": @"", @"title": @"移除热点"},
+        @{@"category": @"顶栏移除", @"section": @"", @"title": @"移除经验"},
+        @{@"category": @"顶栏移除", @"section": @"", @"title": @"移除短剧"},
+        @{@"category": @"顶栏移除", @"section": @"", @"title": @"移除看剧"},
+        @{@"category": @"顶栏移除", @"section": @"", @"title": @"移除少儿"},
+        @{@"category": @"顶栏移除", @"section": @"", @"title": @"移除游戏"},
+        @{@"category": @"顶栏移除", @"section": @"", @"title": @"移除长视频"},
+        @{@"category": @"增强设置", @"section": @"长按面板设置", @"title": @"长按保存当前视频"},
+        @{@"category": @"增强设置", @"section": @"长按面板设置", @"title": @"长按保存视频封面"},
+        @{@"category": @"增强设置", @"section": @"长按面板设置", @"title": @"长按保存视频音乐"},
+        @{@"category": @"增强设置", @"section": @"长按面板设置", @"title": @"长按保存当前图片"},
+        @{@"category": @"增强设置", @"section": @"长按面板设置", @"title": @"长按保存所有图片"},
+        @{@"category": @"增强设置", @"section": @"长按面板设置", @"title": @"长按面板制作视频"},
+        @{@"category": @"增强设置", @"section": @"长按面板设置", @"title": @"长按复制视频文案"},
+        @{@"category": @"增强设置", @"section": @"长按面板设置", @"title": @"长按复制分享链接"},
+        @{@"category": @"增强设置", @"section": @"长按面板设置", @"title": @"长按接口解析下载"},
+        @{@"category": @"增强设置", @"section": @"长按面板设置", @"title": @"长按面板过滤用户"},
+        @{@"category": @"增强设置", @"section": @"长按面板设置", @"title": @"长按面板过滤文案"},
+        @{@"category": @"增强设置", @"section": @"长按面板设置", @"title": @"长按定时关闭抖音"},
+        @{@"category": @"增强设置", @"section": @"媒体保存", @"title": @"接口解析保存媒体"},
+        @{@"category": @"增强设置", @"section": @"媒体保存", @"title": @"接口显示清晰选项"},
+        @{@"category": @"增强设置", @"section": @"媒体保存", @"title": @"保存面板玻璃效果"},
+        @{@"category": @"增强设置", @"section": @"媒体保存", @"title": @"面板毛玻璃透明度"},
+        @{@"category": @"增强设置", @"section": @"媒体保存", @"title": @"移除评论实况水印"},
+        @{@"category": @"增强设置", @"section": @"媒体保存", @"title": @"移除评论图片水印"},
+        @{@"category": @"增强设置", @"section": @"媒体保存", @"title": @"保存评论区图片"},
+        @{@"category": @"增强设置", @"section": @"媒体保存", @"title": @"保存评论区语音"},
+        @{@"category": @"增强设置", @"section": @"媒体保存", @"title": @"保存评论区表情包"},
+        @{@"category": @"增强设置", @"section": @"媒体保存", @"title": @"保存预览页表情包"},
+        @{@"category": @"增强设置", @"section": @"媒体保存", @"title": @"保存聊天页表情包"},
+        @{@"category": @"增强设置", @"section": @"媒体保存", @"title": @"下载完成震动反馈"},
+        @{@"category": @"增强设置", @"section": @"ABTest", @"title": @"禁止下发配置"},
+        @{@"category": @"增强设置", @"section": @"ABTest", @"title": @"配置应用方式"},
+        @{@"category": @"增强设置", @"section": @"ABTest", @"title": @"远程配置地址"},
+        @{@"category": @"增强设置", @"section": @"ABTest", @"title": @"检查配置更新"},
+        @{@"category": @"增强设置", @"section": @"ABTest", @"title": @"导出当前配置"},
+        @{@"category": @"增强设置", @"section": @"ABTest", @"title": @"导出本地配置"},
+        @{@"category": @"增强设置", @"section": @"ABTest", @"title": @"导入本地配置"},
+        @{@"category": @"增强设置", @"section": @"ABTest", @"title": @"删除本地配置"},
+        @{@"category": @"增强设置", @"section": @"交互增强", @"title": @"禁用双指长按入口"},
+        @{@"category": @"增强设置", @"section": @"交互增强", @"title": @"左侧边栏快捷入口"},
+        @{@"category": @"增强设置", @"section": @"交互增强", @"title": @"禁止侧滑进入边栏"},
+        @{@"category": @"增强设置", @"section": @"交互增强", @"title": @"横屏视频交互增强"},
+        @{@"category": @"增强设置", @"section": @"交互增强", @"title": @"禁用自动进入直播"},
+        @{@"category": @"增强设置", @"section": @"交互增强", @"title": @"禁止直播标签收缩"},
+        @{@"category": @"增强设置", @"section": @"交互增强", @"title": @"启用保存他人头像"},
+        @{@"category": @"增强设置", @"section": @"交互增强", @"title": @"复制评论移除昵称"},
+        @{@"category": @"增强设置", @"section": @"交互增强", @"title": @"长按简介复制简介"},
+        @{@"category": @"增强设置", @"section": @"交互增强", @"title": @"长按文案复制文案"},
+        @{@"category": @"增强设置", @"section": @"交互增强", @"title": @"评论音乐点击复制"},
+        @{@"category": @"增强设置", @"section": @"交互增强", @"title": @"启用自动勾选原图"},
+        @{@"category": @"增强设置", @"section": @"交互增强", @"title": @"启用新版长按面板"},
+        @{@"category": @"增强设置", @"section": @"交互增强", @"title": @"长按面板玻璃效果"},
+        @{@"category": @"增强设置", @"section": @"交互增强", @"title": @"长按面板深色模式"},
+        @{@"category": @"增强设置", @"section": @"交互增强", @"title": @"资料默认进入作品"},
+        @{@"category": @"增强设置", @"section": @"交互增强", @"title": @"禁用点击首页刷新"},
+        @{@"category": @"增强设置", @"section": @"交互增强", @"title": @"禁用双击视频点赞"},
+        @{@"category": @"增强设置", @"section": @"交互增强", @"title": @"启用双击打开评论"},
+        @{@"category": @"增强设置", @"section": @"交互增强", @"title": @"查看评论显示弹幕"},
+        @{@"category": @"增强设置", @"section": @"交互增强", @"title": @"启用双击打开菜单"},
+        @{@"category": @"增强设置", @"section": @"交互增强", @"title": @"设置双击菜单项目"},
+        @{@"category": @"增强设置", @"section": @"交互增强", @"title": @"保存视频/图片"},
+        @{@"category": @"增强设置", @"section": @"交互增强", @"title": @"保存音频"},
+        @{@"category": @"增强设置", @"section": @"交互增强", @"title": @"接口保存"},
+        @{@"category": @"增强设置", @"section": @"交互增强", @"title": @"制作视频"},
+        @{@"category": @"增强设置", @"section": @"交互增强", @"title": @"复制文案"},
+        @{@"category": @"增强设置", @"section": @"交互增强", @"title": @"打开评论"},
+        @{@"category": @"增强设置", @"section": @"交互增强", @"title": @"点赞视频"},
+        @{@"category": @"增强设置", @"section": @"交互增强", @"title": @"长按面板"},
+        @{@"category": @"增强设置", @"section": @"交互增强", @"title": @"分享视频"},
+        @{@"category": @"悬浮按钮", @"section": @"", @"title": @"启用快捷倍速按钮"},
+        @{@"category": @"悬浮按钮", @"section": @"", @"title": @"快捷倍速数值设置"},
+        @{@"category": @"悬浮按钮", @"section": @"", @"title": @"自动恢复默认倍速"},
+        @{@"category": @"悬浮按钮", @"section": @"", @"title": @"倍速按钮显示后缀"},
+        @{@"category": @"悬浮按钮", @"section": @"", @"title": @"快捷倍速按钮大小"},
+        @{@"category": @"悬浮按钮", @"section": @"", @"title": @"一键清屏按钮"},
+        @{@"category": @"悬浮按钮", @"section": @"", @"title": @"清屏按钮大小"},
+        @{@"category": @"悬浮按钮", @"section": @"", @"title": @"清屏隐藏弹幕"},
+        @{@"category": @"悬浮按钮", @"section": @"", @"title": @"清屏移除进度"},
+        @{@"category": @"悬浮按钮", @"section": @"", @"title": @"清屏隐藏进度"},
+        @{@"category": @"悬浮按钮", @"section": @"", @"title": @"清屏隐藏滑条"},
+        @{@"category": @"悬浮按钮", @"section": @"", @"title": @"清屏隐藏章节"},
+        @{@"category": @"悬浮按钮", @"section": @"", @"title": @"清屏隐藏底栏"},
+        @{@"category": @"悬浮按钮", @"section": @"", @"title": @"清屏隐藏倍速"},
+        ];
+    });
+    return manifest;
+}
+
+static NSDictionary<NSString *, AWESettingItemModel *> *DYYYMainSettingsItemMapFromSections(NSArray<AWESettingSectionModel *> *sections) {
+    NSMutableDictionary<NSString *, AWESettingItemModel *> *itemMap = [NSMutableDictionary dictionary];
+    Class settingItemClass = NSClassFromString(@"AWESettingItemModel");
+    for (AWESettingSectionModel *section in sections) {
+        NSArray *items = [section.itemArray isKindOfClass:[NSArray class]] ? section.itemArray : @[];
+        for (id itemObject in items) {
+            if (!settingItemClass || ![itemObject isKindOfClass:settingItemClass]) {
+                continue;
+            }
+            AWESettingItemModel *item = (AWESettingItemModel *)itemObject;
+            if (item.title.length == 0 || itemMap[item.title]) {
+                continue;
+            }
+            itemMap[item.title] = item;
+        }
+    }
+    return itemMap;
+}
+
+static BOOL DYYYSearchManifestEntryMatches(NSDictionary<NSString *, NSString *> *entry, NSString *keyword) {
+    return DYYYSearchTextContainsKeyword(entry[@"title"], keyword) || DYYYSearchTextContainsKeyword(entry[@"section"], keyword) || DYYYSearchTextContainsKeyword(entry[@"category"], keyword);
+}
+
+static NSString *DYYYSearchSectionTitleForEntry(NSDictionary<NSString *, NSString *> *entry) {
+    NSString *category = entry[@"category"] ?: @"DYYY";
+    NSString *section = entry[@"section"] ?: @"";
+    return section.length > 0 ? [NSString stringWithFormat:@"%@ · %@", category, section] : category;
+}
+
+static UIView *DYYYSearchHighlightBackgroundView(CGRect frame) {
+    UIView *highlightView = [[UIView alloc] initWithFrame:frame];
+    highlightView.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
+    highlightView.backgroundColor = [DYYYUtils isDarkMode] ? [UIColor colorWithWhite:0.22 alpha:1.0] : [UIColor colorWithWhite:0.86 alpha:1.0];
+    highlightView.layer.cornerRadius = 16;
+    highlightView.layer.masksToBounds = YES;
+    return highlightView;
+}
+
+static AWESettingItemModel *DYYYSearchResultItemFromEntry(AWESettingBaseViewController *controller, NSDictionary<NSString *, NSString *> *entry, NSDictionary<NSString *, AWESettingItemModel *> *topLevelItemMap) {
+    Class settingItemClass = NSClassFromString(@"AWESettingItemModel");
+    AWESettingItemModel *parentItem = topLevelItemMap[entry[@"category"]];
+    if (!settingItemClass || ![parentItem isKindOfClass:settingItemClass] || !parentItem.cellTappedBlock) {
+        return nil;
+    }
+
+    __weak AWESettingBaseViewController *weakController = controller;
+    AWESettingItemModel *item = [[settingItemClass alloc] init];
+    item.identifier = [NSString stringWithFormat:@"DYYYSearch_%@_%@", entry[@"category"] ?: @"", entry[@"title"] ?: @""];
+    item.title = entry[@"title"] ?: @"";
+    item.subTitle = @"点击后自动定位并高亮 2 秒";
+    item.detail = @"";
+    item.type = 0;
+    item.svgIconImageName = parentItem.svgIconImageName;
+    item.iconImageName = parentItem.iconImageName;
+    item.cellType = parentItem.cellType ?: 26;
+    item.colorStyle = parentItem.colorStyle;
+    item.isEnable = YES;
+    item.cellTappedBlock = ^{
+      __strong AWESettingBaseViewController *strongController = weakController;
+      if (!strongController) {
+          return;
+      }
+
+      UINavigationController *navigationController = strongController.navigationController;
+      parentItem.cellTappedBlock();
+
+      UIViewController *targetViewController = navigationController.topViewController;
+      if (![targetViewController isKindOfClass:NSClassFromString(@"AWESettingBaseViewController")]) {
+          return;
+      }
+
+      objc_setAssociatedObject(targetViewController, &kDYYYSearchTargetSectionKey, entry[@"section"] ?: @"", OBJC_ASSOCIATION_COPY_NONATOMIC);
+      objc_setAssociatedObject(targetViewController, &kDYYYSearchTargetTitleKey, entry[@"title"] ?: @"", OBJC_ASSOCIATION_COPY_NONATOMIC);
+    };
+    return item;
+}
 
 static void DYYYRemoveRemoteConfigObserver(void) {
     if (dyyyRemoteConfigChangedToken) {
@@ -46,6 +422,15 @@ static void DYYYRemoveRemoteConfigObserver(void) {
     return YES;
 }
 
+- (void)viewDidAppear:(BOOL)animated {
+    %orig;
+    [self dyyy_scrollToSearchTargetIfNeeded];
+    if (!objc_getAssociatedObject(self, &kDYYYMainSettingsPageKey)) {
+        return;
+    }
+    [self dyyy_installSearchBarIfNeeded];
+}
+
 - (AWESettingBaseViewModel *)viewModel {
     AWESettingBaseViewModel *original = %orig;
     if (!original)
@@ -56,6 +441,236 @@ static void DYYYRemoveRemoteConfigObserver(void) {
 - (void)dealloc {
     DYYYRemoveRemoteConfigObserver();
     %orig;
+}
+
+%new
+- (void)dyyy_scrollToSearchTargetIfNeeded {
+    NSString *targetTitle = objc_getAssociatedObject(self, &kDYYYSearchTargetTitleKey);
+    if (targetTitle.length == 0) {
+        return;
+    }
+
+    NSString *targetSection = objc_getAssociatedObject(self, &kDYYYSearchTargetSectionKey) ?: @"";
+    AWESettingsViewModel *viewModel = (AWESettingsViewModel *)[self viewModel];
+    if (![viewModel respondsToSelector:@selector(sectionDataArray)]) {
+        return;
+    }
+
+    __block NSIndexPath *targetIndexPath = nil;
+    NSArray *sections = [viewModel.sectionDataArray isKindOfClass:[NSArray class]] ? viewModel.sectionDataArray : @[];
+    for (NSInteger sectionIndex = 0; sectionIndex < sections.count; sectionIndex++) {
+        AWESettingSectionModel *sectionModel = sections[sectionIndex];
+        NSArray *items = [sectionModel.itemArray isKindOfClass:[NSArray class]] ? sectionModel.itemArray : @[];
+        BOOL sectionMatches = targetSection.length == 0 || [sectionModel.sectionHeaderTitle isEqualToString:targetSection];
+        for (NSInteger row = 0; row < items.count; row++) {
+            AWESettingItemModel *item = items[row];
+            if (![item.title isEqualToString:targetTitle]) {
+                continue;
+            }
+            if (!sectionMatches && targetSection.length > 0) {
+                continue;
+            }
+            targetIndexPath = [NSIndexPath indexPathForRow:row inSection:sectionIndex];
+            break;
+        }
+        if (targetIndexPath) {
+            break;
+        }
+    }
+
+    if (!targetIndexPath && targetSection.length > 0) {
+        for (NSInteger sectionIndex = 0; sectionIndex < sections.count; sectionIndex++) {
+            AWESettingSectionModel *sectionModel = sections[sectionIndex];
+            NSArray *items = [sectionModel.itemArray isKindOfClass:[NSArray class]] ? sectionModel.itemArray : @[];
+            for (NSInteger row = 0; row < items.count; row++) {
+                AWESettingItemModel *item = items[row];
+                if ([item.title isEqualToString:targetTitle]) {
+                    targetIndexPath = [NSIndexPath indexPathForRow:row inSection:sectionIndex];
+                    break;
+                }
+            }
+            if (targetIndexPath) {
+                break;
+            }
+        }
+    }
+
+    if (!targetIndexPath) {
+        return;
+    }
+
+    objc_setAssociatedObject(self, &kDYYYSearchTargetSectionKey, nil, OBJC_ASSOCIATION_ASSIGN);
+    objc_setAssociatedObject(self, &kDYYYSearchTargetTitleKey, nil, OBJC_ASSOCIATION_ASSIGN);
+
+    dispatch_async(dispatch_get_main_queue(), ^{
+      [self.tableView layoutIfNeeded];
+      [self.tableView scrollToRowAtIndexPath:targetIndexPath atScrollPosition:UITableViewScrollPositionMiddle animated:YES];
+      dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(350 * NSEC_PER_MSEC)), dispatch_get_main_queue(), ^{
+        if ([self.tableView numberOfSections] <= targetIndexPath.section || [self.tableView numberOfRowsInSection:targetIndexPath.section] <= targetIndexPath.row) {
+            return;
+        }
+        UITableViewCell *targetCell = [self.tableView cellForRowAtIndexPath:targetIndexPath];
+        if (!targetCell) {
+            return;
+        }
+        UIView *originalSelectedBackgroundView = targetCell.selectedBackgroundView;
+        targetCell.selectedBackgroundView = DYYYSearchHighlightBackgroundView(targetCell.bounds);
+        [self.tableView selectRowAtIndexPath:targetIndexPath animated:YES scrollPosition:UITableViewScrollPositionMiddle];
+        dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(2.0 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+          [self.tableView deselectRowAtIndexPath:targetIndexPath animated:YES];
+          targetCell.selectedBackgroundView = originalSelectedBackgroundView;
+        });
+      });
+    });
+}
+
+%new
+- (void)dyyy_installSearchBarIfNeeded {
+    if (objc_getAssociatedObject(self, &kDYYYSearchBarInstalledKey)) {
+        return;
+    }
+
+    UITableView *tableView = self.tableView;
+    if (![tableView isKindOfClass:[UITableView class]]) {
+        return;
+    }
+
+    AWESettingsViewModel *viewModel = (AWESettingsViewModel *)[self viewModel];
+    if ([viewModel respondsToSelector:@selector(sectionDataArray)] && !objc_getAssociatedObject(self, &kDYYYOriginalSectionsKey)) {
+        NSArray *originalSections = [viewModel.sectionDataArray copy];
+        objc_setAssociatedObject(self, &kDYYYOriginalSectionsKey, originalSections, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+    }
+
+    UIView *headerView = [[UIView alloc] initWithFrame:CGRectMake(0, 0, tableView.bounds.size.width, 64)];
+    headerView.backgroundColor = UIColor.clearColor;
+
+    UIView *searchContainer = [[UIView alloc] initWithFrame:CGRectMake(16, 8, tableView.bounds.size.width - 32, 44)];
+    searchContainer.autoresizingMask = UIViewAutoresizingFlexibleWidth;
+    searchContainer.backgroundColor = [DYYYUtils isDarkMode] ? [UIColor colorWithWhite:0.14 alpha:1.0] : [UIColor whiteColor];
+    searchContainer.layer.cornerRadius = 14;
+    searchContainer.layer.masksToBounds = YES;
+
+    UIImageView *searchIcon = [[UIImageView alloc] initWithFrame:CGRectMake(14, 12, 20, 20)];
+    searchIcon.image = [UIImage systemImageNamed:@"magnifyingglass"];
+    searchIcon.tintColor = [UIColor colorWithWhite:0.6 alpha:1.0];
+    [searchContainer addSubview:searchIcon];
+
+    UITextField *searchField = [[UITextField alloc] initWithFrame:CGRectMake(42, 0, searchContainer.bounds.size.width - 56, searchContainer.bounds.size.height)];
+    searchField.autoresizingMask = UIViewAutoresizingFlexibleWidth;
+    searchField.placeholder = @"搜索 DYYY 功能";
+    searchField.clearButtonMode = UITextFieldViewModeWhileEditing;
+    searchField.textColor = [DYYYUtils isDarkMode] ? UIColor.whiteColor : UIColor.blackColor;
+    searchField.tintColor = [UIColor systemBlueColor];
+    [searchField addTarget:self action:@selector(dyyy_searchTextChanged:) forControlEvents:UIControlEventEditingChanged];
+    [searchContainer addSubview:searchField];
+
+    [headerView addSubview:searchContainer];
+    tableView.tableHeaderView = headerView;
+    objc_setAssociatedObject(self, &kDYYYSearchBarInstalledKey, @YES, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+}
+
+%new
+- (void)dyyy_searchTextChanged:(UITextField *)textField {
+    NSString *keyword = [[textField.text ?: @"" stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceAndNewlineCharacterSet]] lowercaseString];
+    NSArray *originalSections = objc_getAssociatedObject(self, &kDYYYOriginalSectionsKey);
+    if (![originalSections isKindOfClass:[NSArray class]]) {
+        return;
+    }
+
+    AWESettingsViewModel *viewModel = (AWESettingsViewModel *)[self viewModel];
+    if (![viewModel respondsToSelector:@selector(setSectionDataArray:)]) {
+        return;
+    }
+
+    if (keyword.length == 0) {
+        viewModel.sectionDataArray = originalSections;
+        [self.tableView reloadData];
+        return;
+    }
+
+    NSMutableArray *filteredSections = [NSMutableArray array];
+    for (AWESettingSectionModel *section in originalSections) {
+        NSArray *items = [section.itemArray isKindOfClass:[NSArray class]] ? section.itemArray : @[];
+        NSString *sectionTitle = [section.sectionHeaderTitle ?: @"" lowercaseString];
+        BOOL sectionMatched = [sectionTitle containsString:keyword];
+
+        NSMutableArray *matchedItems = [NSMutableArray array];
+        for (AWESettingItemModel *item in items) {
+            NSString *title = [item.title ?: @"" lowercaseString];
+            NSString *subTitle = [item.subTitle ?: @"" lowercaseString];
+            NSString *detail = [item.detail ?: @"" lowercaseString];
+            NSString *identifier = [item.identifier ?: @"" lowercaseString];
+            if (sectionMatched || [title containsString:keyword] || [subTitle containsString:keyword] || [detail containsString:keyword] || [identifier containsString:keyword]) {
+                [matchedItems addObject:item];
+            }
+        }
+
+        if (matchedItems.count == 0) {
+            continue;
+        }
+
+        AWESettingSectionModel *copiedSection = [[NSClassFromString(@"AWESettingSectionModel") alloc] init];
+        copiedSection.type = section.type;
+        copiedSection.sectionHeaderHeight = section.sectionHeaderHeight;
+        copiedSection.sectionHeaderTitle = section.sectionHeaderTitle;
+        copiedSection.sectionFooterTitle = section.sectionFooterTitle;
+        copiedSection.useNewFooterLayout = section.useNewFooterLayout;
+        copiedSection.identifier = section.identifier;
+        copiedSection.title = section.title;
+        copiedSection.itemArray = matchedItems;
+        [filteredSections addObject:copiedSection];
+    }
+
+    if (objc_getAssociatedObject(self, &kDYYYMainSettingsPageKey)) {
+        NSDictionary<NSString *, AWESettingItemModel *> *topLevelItemMap = DYYYMainSettingsItemMapFromSections(originalSections);
+        NSMutableDictionary<NSString *, NSMutableArray<AWESettingItemModel *> *> *groupedSearchItems = [NSMutableDictionary dictionary];
+        NSMutableArray<NSString *> *orderedSectionTitles = [NSMutableArray array];
+        NSMutableSet<NSString *> *dedupeKeys = [NSMutableSet set];
+
+        for (NSDictionary<NSString *, NSString *> *entry in DYYYSearchManifest()) {
+            if (!DYYYSearchManifestEntryMatches(entry, keyword)) {
+                continue;
+            }
+
+            NSString *dedupeKey = [NSString stringWithFormat:@"%@|%@|%@", entry[@"category"] ?: @"", entry[@"section"] ?: @"", entry[@"title"] ?: @""];
+            if ([dedupeKeys containsObject:dedupeKey]) {
+                continue;
+            }
+
+            AWESettingItemModel *searchItem = DYYYSearchResultItemFromEntry(self, entry, topLevelItemMap);
+            if (!searchItem) {
+                continue;
+            }
+
+            NSString *groupTitle = DYYYSearchSectionTitleForEntry(entry);
+            if (!groupedSearchItems[groupTitle]) {
+                groupedSearchItems[groupTitle] = [NSMutableArray array];
+                [orderedSectionTitles addObject:groupTitle];
+            }
+
+            [dedupeKeys addObject:dedupeKey];
+            [groupedSearchItems[groupTitle] addObject:searchItem];
+        }
+
+        for (NSInteger index = orderedSectionTitles.count - 1; index >= 0; index--) {
+            NSString *groupTitle = orderedSectionTitles[index];
+            NSArray<AWESettingItemModel *> *items = groupedSearchItems[groupTitle];
+            if (items.count == 0) {
+                continue;
+            }
+
+            AWESettingSectionModel *searchSection = [[NSClassFromString(@"AWESettingSectionModel") alloc] init];
+            searchSection.type = 0;
+            searchSection.sectionHeaderHeight = 40;
+            searchSection.sectionHeaderTitle = groupTitle;
+            searchSection.useNewFooterLayout = YES;
+            searchSection.itemArray = items;
+            [filteredSections insertObject:searchSection atIndex:0];
+        }
+    }
+
+    viewModel.sectionDataArray = filteredSections;
+    [self.tableView reloadData];
 }
 %end
 
@@ -220,6 +835,7 @@ extern "C"
 #endif
 void showDYYYSettingsVC(UIViewController *rootVC, BOOL hasAgreed) {
     AWESettingBaseViewController *settingsVC = [[%c(AWESettingBaseViewController) alloc] init];
+    objc_setAssociatedObject(settingsVC, &kDYYYMainSettingsPageKey, @YES, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
     if (!hasAgreed) {
         [DYYYSettingsHelper showAboutDialog:@"用户协议"
                                     message:@"本插件为开源项目\n仅供学习交流用途\n如有侵权请联系, GitHub 仓库：huami1314/DYYY\n请遵守当地法律法规, "
