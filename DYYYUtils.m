@@ -378,6 +378,70 @@ static BOOL DYYYUtilsWriteStaticImageToGIF(UIImage *image, NSURL *gifURL) {
     return success;
 }
 
+static NSString *DYYYMediaInfoSafeString(id value) {
+    return [value isKindOfClass:[NSString class]] ? (NSString *)value : @"";
+}
+
+static NSString *DYYYMediaInfoFormattedTimestamp(NSNumber *timestamp) {
+    NSTimeInterval seconds = ([timestamp respondsToSelector:@selector(doubleValue)] && [timestamp doubleValue] > 0) ? [timestamp doubleValue] : [[NSDate date] timeIntervalSince1970];
+    NSDate *date = [NSDate dateWithTimeIntervalSince1970:seconds];
+    NSDateFormatter *formatter = [[NSDateFormatter alloc] init];
+    formatter.locale = [NSLocale localeWithLocaleIdentifier:@"zh_CN"];
+    formatter.dateFormat = @"yyyy-MM-dd HH:mm:ss";
+    return [formatter stringFromDate:date] ?: @"";
+}
+
+static NSString *DYYYMediaInfoFormattedSaveTime(void) {
+    NSDateFormatter *formatter = [[NSDateFormatter alloc] init];
+    formatter.locale = [NSLocale localeWithLocaleIdentifier:@"zh_CN"];
+    formatter.dateFormat = @"yyyy年M月d日 EEEE HH:mm";
+    return [formatter stringFromDate:[NSDate date]] ?: @"";
+}
+
+static NSString *DYYYMediaInfoSummary(NSDictionary *mediaInfo) {
+    NSString *shortID = DYYYMediaInfoSafeString(mediaInfo[@"shortID"]);
+    NSString *nickname = DYYYMediaInfoSafeString(mediaInfo[@"nickname"]);
+    NSString *publishTime = DYYYMediaInfoFormattedTimestamp(mediaInfo[@"createTime"]);
+    return [NSString stringWithFormat:@"抖音号: %@ · 抖音用户: %@ · 发布时间: %@",
+                                      shortID.length > 0 ? shortID : @"未知",
+                                      nickname.length > 0 ? nickname : @"未知用户",
+                                      publishTime.length > 0 ? publishTime : @"未知"];
+}
+
+static NSString *DYYYMediaInfoFilename(NSDictionary *mediaInfo, NSString *pathExtension) {
+    NSString *shortID = DYYYMediaInfoSafeString(mediaInfo[@"shortID"]);
+    NSString *nickname = DYYYMediaInfoSafeString(mediaInfo[@"nickname"]);
+    NSString *publishTime = DYYYMediaInfoFormattedTimestamp(mediaInfo[@"createTime"]);
+    NSString *baseName = [NSString stringWithFormat:@"抖音号：%@ · 抖音用户：%@ · 发布时间：%@",
+                                                    shortID.length > 0 ? shortID : @"未知",
+                                                    nickname.length > 0 ? nickname : @"未知用户",
+                                                    publishTime.length > 0 ? publishTime : @"未知"];
+
+    NSMutableString *sanitized = [[baseName mutableCopy] ?: [NSMutableString string] mutableCopy];
+    NSArray<NSString *> *invalidCharacters = @[ @"/", @"\n", @"\r", @"\t", @":" ];
+    for (NSString *invalidCharacter in invalidCharacters) {
+        [sanitized replaceOccurrencesOfString:invalidCharacter
+                                   withString:( [invalidCharacter isEqualToString:@":"] ? @"：" : @" " )
+                                      options:0
+                                        range:NSMakeRange(0, sanitized.length)];
+    }
+
+    while ([sanitized containsString:@"  "]) {
+        [sanitized replaceOccurrencesOfString:@"  " withString:@" " options:0 range:NSMakeRange(0, sanitized.length)];
+    }
+
+    NSString *trimmed = [sanitized stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceAndNewlineCharacterSet]];
+    if (trimmed.length == 0) {
+        trimmed = @"抖音保存";
+    }
+    if (trimmed.length > 80) {
+        trimmed = [trimmed substringToIndex:80];
+    }
+
+    NSString *resolvedExtension = pathExtension.length > 0 ? pathExtension : @"dat";
+    return [NSString stringWithFormat:@"%@.%@", trimmed, resolvedExtension];
+}
+
 @interface DYYYUtils ()
 + (NSString *)fallbackLocationFromIPAttribution:(AWEAwemeModel *)model;
 + (NSString *)displayLocationForGeoNamesError:(NSError *)error model:(AWEAwemeModel *)model;
@@ -1127,6 +1191,177 @@ static void DYYYApplyDisplayLocationToLabel(UILabel *label, NSString *displayLoc
     UIImage *resizedImage = UIGraphicsGetImageFromCurrentImageContext();
     UIGraphicsEndImageContext();
     return resizedImage ?: image;
+}
+
++ (void)writeMediaInfo:(NSDictionary *)mediaInfo
+         toImageAtURL:(NSURL *)imageURL
+           completion:(void (^)(BOOL success, NSURL *outputURL))completion {
+    if (!imageURL || mediaInfo.count == 0) {
+        dispatch_async(dispatch_get_main_queue(), ^{
+          if (completion) {
+              completion(imageURL != nil, imageURL);
+          }
+        });
+        return;
+    }
+
+    dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
+      CGImageSourceRef source = CGImageSourceCreateWithURL((__bridge CFURLRef)imageURL, NULL);
+      if (!source) {
+          dispatch_async(dispatch_get_main_queue(), ^{
+            if (completion) {
+                completion(NO, nil);
+            }
+          });
+          return;
+      }
+
+      NSDictionary *sourceProperties = (__bridge_transfer NSDictionary *)CGImageSourceCopyPropertiesAtIndex(source, 0, NULL);
+      NSMutableDictionary *metadata = sourceProperties ? [sourceProperties mutableCopy] : [NSMutableDictionary dictionary];
+      NSMutableDictionary *tiff = [metadata[(__bridge NSString *)kCGImagePropertyTIFFDictionary] mutableCopy] ?: [NSMutableDictionary dictionary];
+      NSMutableDictionary *exif = [metadata[(__bridge NSString *)kCGImagePropertyExifDictionary] mutableCopy] ?: [NSMutableDictionary dictionary];
+      NSMutableDictionary *png = [metadata[(__bridge NSString *)kCGImagePropertyPNGDictionary] mutableCopy] ?: [NSMutableDictionary dictionary];
+
+      NSString *saveTime = DYYYMediaInfoFormattedSaveTime();
+      NSString *summary = DYYYMediaInfoSummary(mediaInfo);
+      NSString *publishTime = DYYYMediaInfoFormattedTimestamp(mediaInfo[@"createTime"]);
+
+      tiff[(__bridge NSString *)kCGImagePropertyTIFFSoftware] = DYYY_NAME;
+      tiff[(__bridge NSString *)kCGImagePropertyTIFFArtist] = DYYYMediaInfoSafeString(mediaInfo[@"nickname"]);
+      tiff[(__bridge NSString *)kCGImagePropertyTIFFImageDescription] = summary;
+      exif[(__bridge NSString *)kCGImagePropertyExifUserComment] = summary;
+      exif[(__bridge NSString *)kCGImagePropertyExifDateTimeOriginal] = publishTime;
+      png[(__bridge NSString *)kCGImagePropertyPNGDescription] = summary;
+
+      metadata[(__bridge NSString *)kCGImagePropertyTIFFDictionary] = tiff;
+      metadata[(__bridge NSString *)kCGImagePropertyExifDictionary] = exif;
+      metadata[(__bridge NSString *)kCGImagePropertyPNGDictionary] = png;
+
+      NSString *uti = (__bridge_transfer NSString *)CGImageSourceGetType(source);
+      NSString *outputFileName = DYYYMediaInfoFilename(mediaInfo, imageURL.pathExtension.length > 0 ? imageURL.pathExtension : @"jpg");
+      NSString *outputPath = [DYYYUtils cachePathForFilename:outputFileName];
+      NSURL *outputURL = [NSURL fileURLWithPath:outputPath];
+      [[NSFileManager defaultManager] removeItemAtURL:outputURL error:nil];
+
+      CGImageDestinationRef destination = CGImageDestinationCreateWithURL((__bridge CFURLRef)outputURL, (__bridge CFStringRef)(uti ?: (__bridge NSString *)kUTTypeJPEG), 1, NULL);
+      BOOL success = NO;
+      if (destination) {
+          CGImageDestinationAddImageFromSource(destination, source, 0, (__bridge CFDictionaryRef)metadata);
+          success = CGImageDestinationFinalize(destination);
+          CFRelease(destination);
+      }
+      CFRelease(source);
+
+      if (success) {
+          NSDictionary *attributes = @{
+              NSFileCreationDate : [NSDate date],
+              NSFileModificationDate : [NSDate date],
+              NSFileExtensionHidden : @NO
+          };
+          [[NSFileManager defaultManager] setAttributes:attributes ofItemAtPath:outputURL.path error:nil];
+          NSLog(@"[DYYY] 图片元数据写入完成: %@ %@", saveTime, summary);
+      } else {
+          [[NSFileManager defaultManager] removeItemAtURL:outputURL error:nil];
+      }
+
+      dispatch_async(dispatch_get_main_queue(), ^{
+        if (completion) {
+            completion(success, success ? outputURL : nil);
+        }
+      });
+    });
+}
+
++ (void)writeMediaInfo:(NSDictionary *)mediaInfo
+         toVideoAtURL:(NSURL *)videoURL
+           completion:(void (^)(BOOL success, NSURL *outputURL))completion {
+    if (!videoURL || mediaInfo.count == 0) {
+        dispatch_async(dispatch_get_main_queue(), ^{
+          if (completion) {
+              completion(videoURL != nil, videoURL);
+          }
+        });
+        return;
+    }
+
+    dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
+      AVURLAsset *asset = [AVURLAsset URLAssetWithURL:videoURL options:nil];
+      AVAssetTrack *videoTrack = [[asset tracksWithMediaType:AVMediaTypeVideo] firstObject];
+      if (!videoTrack) {
+          dispatch_async(dispatch_get_main_queue(), ^{
+            if (completion) {
+                completion(NO, nil);
+            }
+          });
+          return;
+      }
+
+      NSString *summary = DYYYMediaInfoSummary(mediaInfo);
+      NSString *publishTime = DYYYMediaInfoFormattedTimestamp(mediaInfo[@"createTime"]);
+      NSString *saveTime = DYYYMediaInfoFormattedSaveTime();
+      NSDate *now = [NSDate date];
+      NSDateFormatter *isoFormatter = [[NSDateFormatter alloc] init];
+      isoFormatter.locale = [NSLocale localeWithLocaleIdentifier:@"en_US_POSIX"];
+      isoFormatter.timeZone = [NSTimeZone timeZoneWithAbbreviation:@"UTC"];
+      isoFormatter.dateFormat = @"yyyy-MM-dd'T'HH:mm:ss'Z'";
+      NSString *creationDateString = [isoFormatter stringFromDate:now];
+
+      AVMutableMetadataItem *descriptionItem = [[AVMutableMetadataItem alloc] init];
+      descriptionItem.identifier = AVMetadataCommonIdentifierDescription;
+      descriptionItem.value = summary;
+      descriptionItem.dataType = (__bridge NSString *)kCMMetadataBaseDataType_UTF8;
+
+      AVMutableMetadataItem *titleItem = [[AVMutableMetadataItem alloc] init];
+      titleItem.identifier = AVMetadataCommonIdentifierTitle;
+      titleItem.value = DYYY_NAME;
+      titleItem.dataType = (__bridge NSString *)kCMMetadataBaseDataType_UTF8;
+
+      AVMutableMetadataItem *creationDateItem = [[AVMutableMetadataItem alloc] init];
+      creationDateItem.identifier = AVMetadataCommonIdentifierCreationDate;
+      creationDateItem.value = creationDateString;
+      creationDateItem.dataType = (__bridge NSString *)kCMMetadataBaseDataType_UTF8;
+
+      AVMutableMetadataItem *quickTimeCommentItem = [[AVMutableMetadataItem alloc] init];
+      quickTimeCommentItem.keySpace = AVMetadataKeySpaceQuickTimeMetadata;
+      quickTimeCommentItem.key = AVMetadataQuickTimeMetadataKeyComment;
+      quickTimeCommentItem.value = [NSString stringWithFormat:@"保存时间: %@\n%@", saveTime, summary];
+      quickTimeCommentItem.dataType = (__bridge NSString *)kCMMetadataBaseDataType_UTF8;
+
+      AVMutableMetadataItem *quickTimeAuthorItem = [[AVMutableMetadataItem alloc] init];
+      quickTimeAuthorItem.keySpace = AVMetadataKeySpaceQuickTimeMetadata;
+      quickTimeAuthorItem.key = AVMetadataQuickTimeMetadataKeyAuthor;
+      quickTimeAuthorItem.value = DYYYMediaInfoSafeString(mediaInfo[@"nickname"]);
+      quickTimeAuthorItem.dataType = (__bridge NSString *)kCMMetadataBaseDataType_UTF8;
+
+      NSString *outputFileName = DYYYMediaInfoFilename(mediaInfo, @"mp4");
+      NSString *outputPath = [DYYYUtils cachePathForFilename:outputFileName];
+      NSURL *outputURL = [NSURL fileURLWithPath:outputPath];
+      [[NSFileManager defaultManager] removeItemAtURL:outputURL error:nil];
+
+      AVAssetExportSession *exportSession = [[AVAssetExportSession alloc] initWithAsset:asset presetName:AVAssetExportPresetPassthrough];
+      exportSession.outputURL = outputURL;
+      exportSession.outputFileType = AVFileTypeMPEG4;
+      exportSession.metadata = @[ titleItem, descriptionItem, creationDateItem, quickTimeCommentItem, quickTimeAuthorItem ];
+
+      [exportSession exportAsynchronouslyWithCompletionHandler:^{
+        BOOL success = exportSession.status == AVAssetExportSessionStatusCompleted;
+        if (!success) {
+            NSLog(@"[DYYY] 视频元数据写入失败: %@, publish=%@", exportSession.error, publishTime);
+            [[NSFileManager defaultManager] removeItemAtURL:outputURL error:nil];
+        } else {
+            NSDictionary *attributes = @{
+                NSFileCreationDate : now,
+                NSFileModificationDate : now
+            };
+            [[NSFileManager defaultManager] setAttributes:attributes ofItemAtPath:outputURL.path error:nil];
+        }
+        dispatch_async(dispatch_get_main_queue(), ^{
+          if (completion) {
+              completion(success, success ? outputURL : nil);
+          }
+        });
+      }];
+    });
 }
 
 + (CGRect)rectForImageAspectFit:(CGSize)imageSize inSize:(CGSize)containerSize {
