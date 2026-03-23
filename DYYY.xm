@@ -6018,6 +6018,7 @@ static NSHashTable *processedParentViews = nil;
                                       [DYYYManager downloadMedia:downloadURL
                                                        mediaType:MediaTypeImage
                                                            audio:nil
+                                                      awemeModel:awemeModel
                                                       completion:^(BOOL success) {
                                                         if (success) {
                                                         } else {
@@ -6057,6 +6058,7 @@ static NSHashTable *processedParentViews = nil;
                                   [DYYYManager downloadMedia:url
                                                    mediaType:MediaTypeVideo
                                                        audio:audioURL
+                                                  awemeModel:awemeModel
                                                   completion:^(BOOL success){
                                                   }];
                               }
@@ -6117,7 +6119,7 @@ static NSHashTable *processedParentViews = nil;
                               }
 
                               if (imageURLs.count > 0) {
-                                  [DYYYManager downloadAllImages:imageURLs];
+                                  [DYYYManager downloadAllImages:imageURLs awemeModel:awemeModel];
                               }
 
                               if (livePhotos.count == 0 && imageURLs.count == 0) {
@@ -6156,7 +6158,7 @@ static NSHashTable *processedParentViews = nil;
                                                                                                             }
 
                                                                                                             // 使用封装的方法进行解析下载
-                                                                                                            [DYYYManager parseAndDownloadVideoWithShareLink:shareLink apiKey:apiKey];
+                                                                                                            [DYYYManager parseAndDownloadVideoWithShareLink:shareLink apiKey:apiKey awemeModel:awemeModel];
                                                                                                           }];
                 [actions addObject:apiDownloadAction];
             }

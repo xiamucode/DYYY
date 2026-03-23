@@ -28,6 +28,7 @@
 @property(nonatomic, strong) NSMutableDictionary<NSString *, NSNumber *> *taskProgressMap;
 @property(nonatomic, strong) NSMutableDictionary<NSString *, void (^)(BOOL success, NSURL *fileURL)> *completionBlocks;
 @property(nonatomic, strong) NSMutableDictionary<NSString *, NSNumber *> *mediaTypeMap;
+@property(nonatomic, strong) NSMutableDictionary<NSString *, NSDictionary *> *downloadMediaInfoMap;
 @property(nonatomic, strong) NSMutableDictionary<NSString *, NSString *> *filePathToDownloadID;
 
 // 批量下载相关属性
@@ -61,6 +62,7 @@
         _taskProgressMap = [NSMutableDictionary dictionary];
         _completionBlocks = [NSMutableDictionary dictionary];
         _mediaTypeMap = [NSMutableDictionary dictionary];
+        _downloadMediaInfoMap = [NSMutableDictionary dictionary];
         _filePathToDownloadID = [NSMutableDictionary dictionary];
 
         // 初始化批量下载相关字典
@@ -74,7 +76,106 @@
     return self;
 }
 
++ (NSDictionary *)mediaInfoFromAPIData:(NSDictionary *)dataDict {
+    if (![dataDict isKindOfClass:[NSDictionary class]] || dataDict.count == 0) {
+        return nil;
+    }
+
+    NSMutableDictionary *mediaInfo = [NSMutableDictionary dictionary];
+
+    id nicknameValue = dataDict[@"nickname"] ?: dataDict[@"author"] ?: dataDict[@"author_name"] ?: dataDict[@"user_name"] ?: dataDict[@"username"];
+    if ([nicknameValue isKindOfClass:[NSString class]] && [nicknameValue length] > 0) {
+        mediaInfo[@"nickname"] = nicknameValue;
+    }
+
+    id shortIDValue = dataDict[@"shortID"] ?: dataDict[@"short_id"] ?: dataDict[@"unique_id"] ?: dataDict[@"account"] ?: dataDict[@"douyin_id"];
+    if ([shortIDValue isKindOfClass:[NSString class]] && [shortIDValue length] > 0) {
+        mediaInfo[@"shortID"] = shortIDValue;
+    }
+
+    id createTimeValue = dataDict[@"createTime"] ?: dataDict[@"create_time"] ?: dataDict[@"publish_time"] ?: dataDict[@"aweme_create_time"];
+    if ([createTimeValue isKindOfClass:[NSNumber class]]) {
+        mediaInfo[@"createTime"] = createTimeValue;
+    } else if ([createTimeValue isKindOfClass:[NSString class]] && [createTimeValue length] > 0) {
+        NSTimeInterval timestamp = [createTimeValue doubleValue];
+        if (timestamp > 0) {
+            mediaInfo[@"createTime"] = @((NSInteger)timestamp);
+        }
+    }
+
+    NSDictionary *authorDict = [dataDict[@"author"] isKindOfClass:[NSDictionary class]] ? dataDict[@"author"] : nil;
+    if (authorDict) {
+        NSString *nickname = mediaInfo[@"nickname"];
+        NSString *shortID = mediaInfo[@"shortID"];
+        id authorNickname = authorDict[@"nickname"] ?: authorDict[@"name"];
+        id authorShortID = authorDict[@"shortID"] ?: authorDict[@"short_id"] ?: authorDict[@"unique_id"];
+
+        if (nickname.length == 0 && [authorNickname isKindOfClass:[NSString class]] && [authorNickname length] > 0) {
+            mediaInfo[@"nickname"] = authorNickname;
+        }
+        if (shortID.length == 0 && [authorShortID isKindOfClass:[NSString class]] && [authorShortID length] > 0) {
+            mediaInfo[@"shortID"] = authorShortID;
+        }
+    }
+
+    return mediaInfo.count > 0 ? [mediaInfo copy] : nil;
+}
+
++ (NSDictionary *)mediaInfoFromAwemeModel:(AWEAwemeModel *)awemeModel {
+    if (!awemeModel) {
+        return nil;
+    }
+
+    NSMutableDictionary *mediaInfo = [NSMutableDictionary dictionary];
+    AWEUserModel *author = awemeModel.author;
+    NSString *nickname = author.nickname ?: @"";
+    NSString *shortID = author.shortID ?: @"";
+    NSNumber *createTime = awemeModel.createTime;
+
+    if (nickname.length > 0) {
+        mediaInfo[@"nickname"] = nickname;
+    }
+    if (shortID.length > 0) {
+        mediaInfo[@"shortID"] = shortID;
+    }
+    if (createTime) {
+        mediaInfo[@"createTime"] = createTime;
+    }
+
+    return mediaInfo.count > 0 ? [mediaInfo copy] : nil;
+}
+
+- (void)setMediaInfo:(NSDictionary *)mediaInfo forDownloadID:(NSString *)downloadID {
+    if (downloadID.length == 0) {
+        return;
+    }
+    if (mediaInfo.count > 0) {
+        self.downloadMediaInfoMap[downloadID] = [mediaInfo copy];
+    } else {
+        [self.downloadMediaInfoMap removeObjectForKey:downloadID];
+    }
+}
+
+- (NSDictionary *)mediaInfoForFileURL:(NSURL *)fileURL {
+    NSString *downloadID = [self downloadIDForFileURL:fileURL];
+    if (downloadID.length == 0) {
+        return nil;
+    }
+    return self.downloadMediaInfoMap[downloadID];
+}
+
 + (void)saveMedia:(NSURL *)mediaURL mediaType:(MediaType)mediaType completion:(void (^)(BOOL success))completion {
+    [self saveMedia:mediaURL mediaType:mediaType awemeModel:nil completion:completion];
+}
+
++ (void)saveMedia:(NSURL *)mediaURL
+        mediaType:(MediaType)mediaType
+        awemeModel:(AWEAwemeModel *)awemeModel
+       completion:(void (^)(BOOL success))completion {
+    NSDictionary *explicitMediaInfo = [self mediaInfoFromAwemeModel:awemeModel];
+    NSDictionary *storedMediaInfo = [[DYYYManager shared] mediaInfoForFileURL:mediaURL];
+    NSDictionary *mediaInfo = explicitMediaInfo ?: storedMediaInfo;
+
     if (mediaType == MediaTypeAudio) {
         if (completion) {
             dispatch_async(dispatch_get_main_queue(), ^{
@@ -176,26 +277,65 @@
           return;
       }
 
-      [[PHPhotoLibrary sharedPhotoLibrary]
-          performChanges:^{
-            if (mediaType == MediaTypeVideo) {
-                [PHAssetChangeRequest creationRequestForAssetFromVideoAtFileURL:mediaURL];
-            } else {
-                UIImage *image = [UIImage imageWithContentsOfFile:mediaURL.path];
-                if (image) {
-                    [PHAssetChangeRequest creationRequestForAssetFromImage:image];
+      void (^persistProcessedMedia)(NSURL *, MediaType) = ^(NSURL *finalURL, MediaType finalMediaType) {
+          [[PHPhotoLibrary sharedPhotoLibrary]
+              performChanges:^{
+                if (finalMediaType == MediaTypeVideo) {
+                    [PHAssetChangeRequest creationRequestForAssetFromVideoAtFileURL:finalURL];
+                } else {
+                    if (@available(iOS 9.0, *)) {
+                        [PHAssetChangeRequest creationRequestForAssetFromImageAtFileURL:finalURL];
+                    } else {
+                        UIImage *image = [UIImage imageWithContentsOfFile:finalURL.path];
+                        if (image) {
+                            [PHAssetChangeRequest creationRequestForAssetFromImage:image];
+                        }
+                    }
                 }
-            }
-          }
-          completionHandler:^(BOOL success, NSError *_Nullable error) {
-            dispatch_async(dispatch_get_main_queue(), ^{
-              if (!success) {
-                  [DYYYUtils showToast:@"保存失败"];
               }
-              [[NSFileManager defaultManager] removeItemAtPath:mediaURL.path error:nil];
-              reportResult(success);
-            });
-          }];
+              completionHandler:^(BOOL success, NSError *_Nullable error) {
+                dispatch_async(dispatch_get_main_queue(), ^{
+                  if (!success) {
+                      [DYYYUtils showToast:@"保存失败"];
+                  }
+                  [[NSFileManager defaultManager] removeItemAtPath:finalURL.path error:nil];
+                  if (finalURL != mediaURL) {
+                      [[NSFileManager defaultManager] removeItemAtPath:mediaURL.path error:nil];
+                  }
+                  reportResult(success);
+                });
+              }];
+      };
+
+      if (mediaInfo.count > 0) {
+          if (mediaType == MediaTypeImage) {
+              [DYYYUtils writeMediaInfo:mediaInfo
+                           toImageAtURL:mediaURL
+                             completion:^(BOOL success, NSURL *outputURL) {
+                               if (success && outputURL) {
+                                   [[DYYYManager shared] replaceFileURL:mediaURL withFileURL:outputURL];
+                                   persistProcessedMedia(outputURL, mediaType);
+                               } else {
+                                   persistProcessedMedia(mediaURL, mediaType);
+                               }
+                             }];
+              return;
+          } else if (mediaType == MediaTypeVideo) {
+              [DYYYUtils writeMediaInfo:mediaInfo
+                           toVideoAtURL:mediaURL
+                             completion:^(BOOL success, NSURL *outputURL) {
+                                 if (success && outputURL) {
+                                     [[DYYYManager shared] replaceFileURL:mediaURL withFileURL:outputURL];
+                                     persistProcessedMedia(outputURL, mediaType);
+                                 } else {
+                                     persistProcessedMedia(mediaURL, mediaType);
+                                 }
+                               }];
+              return;
+          }
+      }
+
+      persistProcessedMedia(mediaURL, mediaType);
     }];
 }
 
@@ -432,9 +572,18 @@
 }
 
 + (void)downloadMedia:(NSURL *)url mediaType:(MediaType)mediaType audio:(NSURL *)audioURL completion:(void (^)(BOOL success))completion {
+    [self downloadMedia:url mediaType:mediaType audio:audioURL awemeModel:nil completion:completion];
+}
+
++ (void)downloadMedia:(NSURL *)url
+            mediaType:(MediaType)mediaType
+                audio:(NSURL *)audioURL
+            mediaInfo:(NSDictionary *)mediaInfo
+           completion:(void (^)(BOOL success))completion {
     [self downloadMediaWithProgress:url
                           mediaType:mediaType
                               audio:audioURL
+                          mediaInfo:mediaInfo
                            progress:nil
                          completion:^(BOOL success, NSURL *fileURL) {
                            void (^notifyCompletion)(BOOL) = ^(BOOL result) {
@@ -498,42 +647,71 @@
                          }];
 }
 
++ (void)downloadMedia:(NSURL *)url
+            mediaType:(MediaType)mediaType
+                audio:(NSURL *)audioURL
+           awemeModel:(AWEAwemeModel *)awemeModel
+           completion:(void (^)(BOOL success))completion {
+    [self downloadMedia:url
+              mediaType:mediaType
+                  audio:audioURL
+              mediaInfo:[self mediaInfoFromAwemeModel:awemeModel]
+             completion:completion];
+}
+
 + (void)downloadMediaWithProgress:(NSURL *)url
                         mediaType:(MediaType)mediaType
                             audio:(NSURL *)audioURL
                          progress:(void (^)(float progress))progressBlock
                        completion:(void (^)(BOOL success, NSURL *fileURL))completion {
+    [self downloadMediaWithProgress:url mediaType:mediaType audio:audioURL awemeModel:nil progress:progressBlock completion:completion];
+}
+
++ (void)downloadMediaWithProgress:(NSURL *)url
+                        mediaType:(MediaType)mediaType
+                            audio:(NSURL *)audioURL
+                        mediaInfo:(NSDictionary *)mediaInfo
+                         progress:(void (^)(float progress))progressBlock
+                       completion:(void (^)(BOOL success, NSURL *fileURL))completion {
     // 创建自定义进度条界面
     dispatch_async(dispatch_get_main_queue(), ^{
-      // 创建进度视图
       CGRect screenBounds = [UIScreen mainScreen].bounds;
       DYYYToast *progressView = [[DYYYToast alloc] initWithFrame:screenBounds];
 
-      // 生成下载ID并保存进度视图
       NSString *downloadID = [NSUUID UUID].UUIDString;
       [[DYYYManager shared].progressViews setObject:progressView forKey:downloadID];
 
       [progressView show];
 
-      // 保存回调
       [[DYYYManager shared] setCompletionBlock:completion forDownloadID:downloadID];
       [[DYYYManager shared] setMediaType:mediaType forDownloadID:downloadID];
+      [[DYYYManager shared] setMediaInfo:mediaInfo forDownloadID:downloadID];
 
-      // 配置下载会话 - 使用带委托的会话以获取进度更新
       NSURLSessionConfiguration *configuration = [NSURLSessionConfiguration defaultSessionConfiguration];
       NSURLSession *session = [NSURLSession sessionWithConfiguration:configuration delegate:[DYYYManager shared] delegateQueue:[NSOperationQueue mainQueue]];
 
-      // 创建下载任务 - 不使用completionHandler，使用代理方法
       NSURLSessionDownloadTask *downloadTask = [session downloadTaskWithURL:url];
       downloadTask.taskDescription = downloadID;
 
-      // 存储下载任务
       [[DYYYManager shared].downloadTasks setObject:downloadTask forKey:downloadID];
-      [[DYYYManager shared].taskProgressMap setObject:@0.0 forKey:downloadID];  // 初始化进度为0
+      [[DYYYManager shared].taskProgressMap setObject:@0.0 forKey:downloadID];
 
-      // 开始下载
       [downloadTask resume];
     });
+}
+
++ (void)downloadMediaWithProgress:(NSURL *)url
+                        mediaType:(MediaType)mediaType
+                            audio:(NSURL *)audioURL
+                       awemeModel:(AWEAwemeModel *)awemeModel
+                         progress:(void (^)(float progress))progressBlock
+                       completion:(void (^)(BOOL success, NSURL *fileURL))completion {
+    [self downloadMediaWithProgress:url
+                          mediaType:mediaType
+                              audio:audioURL
+                          mediaInfo:[self mediaInfoFromAwemeModel:awemeModel]
+                           progress:progressBlock
+                         completion:completion];
 }
 
 // 取消所有下载
@@ -574,20 +752,27 @@
 
     [[DYYYManager shared].downloadTasks removeAllObjects];
     [[DYYYManager shared].progressViews removeAllObjects];
+    [[DYYYManager shared].downloadMediaInfoMap removeAllObjects];
 }
 
 + (void)downloadAllImages:(NSMutableArray *)imageURLs {
+    [self downloadAllImages:imageURLs awemeModel:nil];
+}
+
++ (void)downloadAllImages:(NSMutableArray *)imageURLs awemeModel:(AWEAwemeModel *)awemeModel {
     if (imageURLs.count == 0) {
         return;
     }
 
     [self downloadAllImagesWithProgress:imageURLs
+                             awemeModel:awemeModel
                                progress:nil
                              completion:^(NSInteger successCount, NSInteger totalCount){
                              }];
 }
 
 + (void)downloadAllImagesWithProgress:(NSMutableArray *)imageURLs
+                            mediaInfo:(NSDictionary *)mediaInfo
                              progress:(void (^)(NSInteger current, NSInteger total))progressBlock
                            completion:(void (^)(NSInteger successCount, NSInteger totalCount))completion {
     if (imageURLs.count == 0) {
@@ -605,7 +790,6 @@
 
       [progressView show];
 
-      __block NSInteger completedCount = 0;
       __block NSInteger successCount = 0;
       NSInteger totalCount = imageURLs.count;
 
@@ -616,10 +800,8 @@
         }
       };
 
-      // 存储批量下载的相关信息
       [[DYYYManager shared] setBatchInfo:batchID totalCount:totalCount progressBlock:progressBlock completionBlock:completion];
 
-      // 为每个URL创建下载任务
       for (NSString *urlString in imageURLs) {
           NSURL *url = [NSURL URLWithString:urlString];
           if (!url) {
@@ -627,20 +809,36 @@
               continue;
           }
 
-          // 创建单个下载任务ID
           NSString *downloadID = [NSUUID UUID].UUIDString;
           [[DYYYManager shared] associateDownload:downloadID withBatchID:batchID];
           NSURLSessionConfiguration *configuration = [NSURLSessionConfiguration defaultSessionConfiguration];
           NSURLSession *session = [NSURLSession sessionWithConfiguration:configuration delegate:[DYYYManager shared] delegateQueue:[NSOperationQueue mainQueue]];
 
-          // 创建下载任务 - 使用代理方法
           NSURLSessionDownloadTask *downloadTask = [session downloadTaskWithURL:url];
+          downloadTask.taskDescription = downloadID;
           [[DYYYManager shared].downloadTasks setObject:downloadTask forKey:downloadID];
           [[DYYYManager shared].taskProgressMap setObject:@0.0 forKey:downloadID];
           [[DYYYManager shared] setMediaType:MediaTypeImage forDownloadID:downloadID];
+          [[DYYYManager shared] setMediaInfo:mediaInfo forDownloadID:downloadID];
           [downloadTask resume];
       }
     });
+}
+
++ (void)downloadAllImagesWithProgress:(NSMutableArray *)imageURLs
+                             progress:(void (^)(NSInteger current, NSInteger total))progressBlock
+                           completion:(void (^)(NSInteger successCount, NSInteger totalCount))completion {
+    [self downloadAllImagesWithProgress:imageURLs awemeModel:nil progress:progressBlock completion:completion];
+}
+
++ (void)downloadAllImagesWithProgress:(NSMutableArray *)imageURLs
+                           awemeModel:(AWEAwemeModel *)awemeModel
+                             progress:(void (^)(NSInteger current, NSInteger total))progressBlock
+                           completion:(void (^)(NSInteger successCount, NSInteger totalCount))completion {
+    [self downloadAllImagesWithProgress:imageURLs
+                              mediaInfo:[self mediaInfoFromAwemeModel:awemeModel]
+                               progress:progressBlock
+                             completion:completion];
 }
 
 // 设置批量下载信息
@@ -827,6 +1025,7 @@
       [self.taskProgressMap removeObjectForKey:downloadID];
       [self.completionBlocks removeObjectForKey:downloadID];
       [self.mediaTypeMap removeObjectForKey:downloadID];
+      [self.downloadMediaInfoMap removeObjectForKey:downloadID];
       [self.downloadTasks removeObjectForKey:downloadID];
       [self.downloadToBatchMap removeObjectForKey:downloadID];
     });
@@ -940,6 +1139,7 @@
 
     if (isBatchDownload) {
         if (!moveError) {
+            [self associateFileURL:destinationURL withDownloadID:downloadIDForTask];
             [DYYYManager saveMedia:destinationURL
                          mediaType:mediaType
                         completion:^(BOOL success) {
@@ -1803,6 +2003,12 @@
 }
 
 + (void)parseAndDownloadVideoWithShareLink:(NSString *)shareLink apiKey:(NSString *)apiKey {
+    [self parseAndDownloadVideoWithShareLink:shareLink apiKey:apiKey awemeModel:nil];
+}
+
++ (void)parseAndDownloadVideoWithShareLink:(NSString *)shareLink
+                                    apiKey:(NSString *)apiKey
+                                awemeModel:(AWEAwemeModel *)awemeModel {
     if (shareLink.length == 0 || apiKey.length == 0) {
         [DYYYUtils showToast:@"分享链接或API密钥无效"];
         return;
@@ -1842,19 +2048,20 @@
                                                     }
 
                                                     // 交给handleVideoData处理数据
-                                                    [self handleVideoData:dataDict];
+                                                    [self handleVideoData:dataDict awemeModel:awemeModel];
                                                   });
                                                 }];
 
     [dataTask resume];
 }
 
-+ (void)handleVideoData:(NSDictionary *)dataDict {
++ (void)handleVideoData:(NSDictionary *)dataDict awemeModel:(AWEAwemeModel *)awemeModel {
     // 首先检查videos和images数组
     NSArray *videoList = dataDict[@"video_list"];
     NSArray *videos = dataDict[@"videos"];
     NSArray *images = dataDict[@"images"];
     NSArray *imgArray = dataDict[@"img"];
+    NSDictionary *mediaInfo = [self mediaInfoFromAPIData:dataDict] ?: [self mediaInfoFromAwemeModel:awemeModel];
 
     // 获取封面URL
     NSString *coverURL = nil;
@@ -1893,6 +2100,7 @@
                                                                                                         [self downloadMedia:videoDownloadUrl
                                                                                                                   mediaType:MediaTypeVideo
                                                                                                                       audio:optionalAudioURL
+                                                                                                                  mediaInfo:mediaInfo
                                                                                                                  completion:^(BOOL success) {
                                                                                                                    if (!success) {
                                                                                                                    }
@@ -1944,6 +2152,7 @@
                 [self downloadMedia:imageDownloadUrl
                           mediaType:MediaTypeImage
                               audio:nil
+                          mediaInfo:mediaInfo
                          completion:^(BOOL success) {
                            if (!success) {
                                [DYYYUtils showToast:@"图片下载失败"];
@@ -1951,7 +2160,10 @@
                          }];
             } else {
                 // 多张图片批量下载
-                [self downloadAllImages:allImages];
+                [self downloadAllImagesWithProgress:allImages
+                                          mediaInfo:mediaInfo
+                                           progress:nil
+                                         completion:nil];
             }
             return;
         }
@@ -1973,6 +2185,7 @@
                                                                                               [self downloadMedia:videoDownloadUrl
                                                                                                         mediaType:MediaTypeVideo
                                                                                                             audio:optionalAudioURL
+                                                                                                        mediaInfo:mediaInfo
                                                                                                        completion:^(BOOL success) {
                                                                                                          if (!success) {
                                                                                                          }
@@ -1988,6 +2201,7 @@
                                                                                                   [self downloadMedia:imageDownloadUrl
                                                                                                             mediaType:MediaTypeImage
                                                                                                                 audio:nil
+                                                                                                            mediaInfo:mediaInfo
                                                                                                            completion:^(BOOL success) {
                                                                                                              if (!success) {
                                                                                                              }
@@ -2051,6 +2265,7 @@
         [self downloadMedia:videoDownloadUrl
                   mediaType:MediaTypeVideo
                       audio:optionalAudioURL
+                  mediaInfo:mediaInfo
                  completion:^(BOOL success) {
                    if (!success) {
                    }
