@@ -5389,6 +5389,7 @@ static NSHashTable *processedParentViews = nil;
 	}
 	%orig;
 }
+%end
 
 %hook AWEAwemeModel
 
@@ -5416,7 +5417,6 @@ static NSHashTable *processedParentViews = nil;
     return orig;
 }
 
-%end
 
 // 屏蔽短剧信息（复用屏蔽合集开关，只对推荐页生效）
 - (id)playletInfoModel {
