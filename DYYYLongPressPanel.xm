@@ -144,12 +144,30 @@
               audioURL = [NSURL URLWithString:musicModel.playURL.originURLList.firstObject];
           }
 
+                  NSURL *preferredURL = nil;
+                  NSURL *fallbackURL = nil;
+                  if (videoModel.playURL && videoModel.playURL.originURLList.count > 0) {
+                      preferredURL = [videoModel.playURL getDYYYSrcURLDownload];
+                  }
                   if (videoModel.h264URL && videoModel.h264URL.originURLList.count > 0) {
-                      NSURL *url = [NSURL URLWithString:videoModel.h264URL.originURLList.firstObject];
+                      fallbackURL = [videoModel.h264URL getDYYYSrcURLDownload];
+                  }
+                  NSURL *url = preferredURL ?: fallbackURL;
+                  if (url) {
                       [DYYYManager downloadMedia:url
                                        mediaType:MediaTypeVideo
                                            audio:audioURL
+                                      awemeModel:awemeModel
                                       completion:^(BOOL success){
+                                        BOOL shouldFallback = !success && fallbackURL && ![fallbackURL.absoluteString isEqualToString:url.absoluteString];
+                                        if (shouldFallback) {
+                                            [DYYYManager downloadMedia:fallbackURL
+                                                             mediaType:MediaTypeVideo
+                                                                 audio:audioURL
+                                                            awemeModel:awemeModel
+                                                            completion:^(BOOL fallbackSuccess){
+                                                            }];
+                                        }
                                       }];
                   }
               
@@ -180,9 +198,9 @@
           // 视频URL从视频模型获取
           NSURL *videoURL = nil;
           if (videoModel && videoModel.playURL && videoModel.playURL.originURLList.count > 0) {
-              videoURL = [NSURL URLWithString:videoModel.playURL.originURLList.firstObject];
+              videoURL = [videoModel.playURL getDYYYSrcURLDownload];
           } else if (videoModel && videoModel.h264URL && videoModel.h264URL.originURLList.count > 0) {
-              videoURL = [NSURL URLWithString:videoModel.h264URL.originURLList.firstObject];
+              videoURL = [videoModel.h264URL getDYYYSrcURLDownload];
           }
 
           // 下载实况照片
@@ -251,6 +269,7 @@
                   [DYYYManager downloadMedia:downloadURL
                                    mediaType:MediaTypeImage
                                        audio:nil
+                                   awemeModel:awemeModel
                                   completion:^(BOOL success) {
                                     if (success) {
                                     } else {
@@ -323,7 +342,7 @@
           }
 
           if (imageURLs.count > 0) {
-              [DYYYManager downloadAllImages:imageURLs];
+              [DYYYManager downloadAllImages:imageURLs awemeModel:awemeModel];
           }
 
           if (livePhotos.count == 0 && imageURLs.count == 0) {
@@ -351,7 +370,7 @@
               return;
           }
           // 使用封装的方法进行解析下载
-          [DYYYManager parseAndDownloadVideoWithShareLink:shareLink apiKey:apiKey];
+          [DYYYManager parseAndDownloadVideoWithShareLink:shareLink apiKey:apiKey awemeModel:self.awemeModel];
           AWELongPressPanelManager *panelManager = [%c(AWELongPressPanelManager) shareInstance];
           [panelManager dismissWithAnimation:YES completion:nil];
         };
@@ -373,6 +392,7 @@
               [DYYYManager downloadMedia:url
                                mediaType:MediaTypeImage
                                    audio:nil
+                               awemeModel:awemeModel
                               completion:^(BOOL success) {
                                 if (success) {
                                 } else {
@@ -912,13 +932,30 @@
               audioURL = [NSURL URLWithString:musicModel.playURL.originURLList.firstObject];
           }
 
-                  // 备用方法：直接使用h264URL
+                  NSURL *preferredURL = nil;
+                  NSURL *fallbackURL = nil;
+                  if (videoModel.playURL && videoModel.playURL.originURLList.count > 0) {
+                      preferredURL = [videoModel.playURL getDYYYSrcURLDownload];
+                  }
                   if (videoModel.h264URL && videoModel.h264URL.originURLList.count > 0) {
-                      NSURL *url = [NSURL URLWithString:videoModel.h264URL.originURLList.firstObject];
+                      fallbackURL = [videoModel.h264URL getDYYYSrcURLDownload];
+                  }
+                  NSURL *url = preferredURL ?: fallbackURL;
+                  if (url) {
                       [DYYYManager downloadMedia:url
                                        mediaType:MediaTypeVideo
                                            audio:audioURL
+                                      awemeModel:awemeModel
                                       completion:^(BOOL success){
+                                        BOOL shouldFallback = !success && fallbackURL && ![fallbackURL.absoluteString isEqualToString:url.absoluteString];
+                                        if (shouldFallback) {
+                                            [DYYYManager downloadMedia:fallbackURL
+                                                             mediaType:MediaTypeVideo
+                                                                 audio:audioURL
+                                                            awemeModel:awemeModel
+                                                            completion:^(BOOL fallbackSuccess){
+                                                            }];
+                                        }
                                       }];
                   }
               
@@ -949,9 +986,9 @@
           // 视频URL从视频模型获取
           NSURL *videoURL = nil;
           if (videoModel && videoModel.playURL && videoModel.playURL.originURLList.count > 0) {
-              videoURL = [NSURL URLWithString:videoModel.playURL.originURLList.firstObject];
+              videoURL = [videoModel.playURL getDYYYSrcURLDownload];
           } else if (videoModel && videoModel.h264URL && videoModel.h264URL.originURLList.count > 0) {
-              videoURL = [NSURL URLWithString:videoModel.h264URL.originURLList.firstObject];
+              videoURL = [videoModel.h264URL getDYYYSrcURLDownload];
           }
 
           // 下载实况照片
@@ -1021,6 +1058,7 @@
                   [DYYYManager downloadMedia:downloadURL
                                    mediaType:MediaTypeImage
                                        audio:nil
+                                   awemeModel:awemeModel
                                   completion:^(BOOL success) {
                                     if (success) {
                                     } else {
@@ -1093,7 +1131,7 @@
           }
 
           if (imageURLs.count > 0) {
-              [DYYYManager downloadAllImages:imageURLs];
+              [DYYYManager downloadAllImages:imageURLs awemeModel:awemeModel];
           }
 
           if (livePhotos.count == 0 && imageURLs.count == 0) {
@@ -1121,7 +1159,7 @@
               return;
           }
           // 使用封装的方法进行解析下载
-          [DYYYManager parseAndDownloadVideoWithShareLink:shareLink apiKey:apiKey];
+          [DYYYManager parseAndDownloadVideoWithShareLink:shareLink apiKey:apiKey awemeModel:self.awemeModel];
           AWELongPressPanelManager *panelManager = [%c(AWELongPressPanelManager) shareInstance];
           [panelManager dismissWithAnimation:YES completion:nil];
         };
@@ -1143,6 +1181,7 @@
               [DYYYManager downloadMedia:url
                                mediaType:MediaTypeImage
                                    audio:nil
+                               awemeModel:awemeModel
                               completion:^(BOOL success) {
                                 if (success) {
                                 } else {
