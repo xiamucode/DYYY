@@ -5389,7 +5389,6 @@ static NSHashTable *processedParentViews = nil;
 	}
 	%orig;
 }
-%end
 
 // 干掉所以合集（包括主页）
 - (id)mixInfo {
