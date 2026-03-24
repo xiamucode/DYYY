@@ -8946,6 +8946,40 @@ static NSString *const kHideRecentUsersKey = @"DYYYHideSidebarRecentUsers";
 
 %end
 
+// 隐藏搜索后的 AI 搜索
+%hook UIView
+
+- (void)addSubview:(UIView *)view {
+    NSString *cls = NSStringFromClass([view class]);
+
+    if ([cls containsString:@"AIBall"] ||
+        [cls containsString:@"AIGCSummaryEntryView"]) {
+        return;
+    }
+
+    %orig;
+}
+
+%end
+
+
+@interface AWESearchAIGCSummaryEntryView : UIView
+@end
+
+%hook AWESearchAIGCSummaryEntryView
+
+- (void)didMoveToSuperview {
+    %orig;
+    self.hidden = YES;
+}
+
+- (void)layoutSubviews {
+    %orig;
+    self.hidden = YES;
+}
+
+%end
+
 
 // 隐藏键盘 AI
 static __weak UIView *cachedHideView = nil;
