@@ -5391,8 +5391,7 @@ static NSHashTable *processedParentViews = nil;
 }
 %end
 
-%hook AWEAwemeModel
-
+// 干掉所以合集（包括主页）
 - (id)mixInfo {
     BOOL enable = DYYYGetBool(@"DYYYHideTemplateVideo");
     id orig = %orig;
@@ -5408,7 +5407,6 @@ static NSHashTable *processedParentViews = nil;
 #pragma clang diagnostic pop
     }
 
-    // 有合集就干掉
     if ([mixName isKindOfClass:[NSString class]] && mixName.length > 0) {
         NSLog(@"[DYYY] hide mixInfo: %@", mixName);
         return nil;
