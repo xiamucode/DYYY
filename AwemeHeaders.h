@@ -44,6 +44,7 @@ typedef NS_ENUM(NSUInteger, DYEdgeMode) {
 
 @interface URLModel : NSObject
 @property(nonatomic, strong) NSArray *originURLList;
+- (NSURL *)getDYYYSrcURLDownload;
 @end
 
 @interface DUXToast : NSObject
@@ -977,6 +978,8 @@ typedef NS_ENUM(NSUInteger, DYEdgeMode) {
 @property(nonatomic, strong) UIView *view;
 @property(nonatomic, strong) UITableView *tableView;
 - (AWESettingBaseViewModel *)viewModel;
+- (void)dyyy_installSearchBarIfNeeded;
+- (void)dyyy_searchTextChanged:(UITextField *)textField;
 @end
 
 @interface AWESettingsViewModel : AWESettingBaseViewModel

@@ -1983,14 +1983,45 @@ static NSString *const kDYYYLongPressCopyEnabledKey = @"DYYYLongPressCopyTextEna
 // 获取资源的地址
 %hook AWEURLModel
 %new - (NSURL *)getDYYYSrcURLDownload {
-    NSURL *bestURL;
-    for (NSString *url in self.originURLList) {
-        if ([url containsString:@"video_mp4"] || [url containsString:@".jpeg"] || [url containsString:@".mp3"]) {
-            bestURL = [NSURL URLWithString:url];
+    NSURL *bestURL = nil;
+    NSInteger bestScore = NSIntegerMin;
+    NSArray<NSString *> *qualityHints = @[ @"4k", @"2160", @"2k", @"1440", @"1080", @"uhd", @"fhd", @"720", @"540", @"480", @"360" ];
+
+    for (NSString *urlString in self.originURLList) {
+        if (![urlString isKindOfClass:[NSString class]] || urlString.length == 0) {
+            continue;
+        }
+
+        NSString *lowerURL = urlString.lowercaseString;
+        NSInteger score = 0;
+
+        if ([lowerURL containsString:@"video_mp4"]) {
+            score += 1000;
+        } else if ([lowerURL containsString:@".jpeg"] || [lowerURL containsString:@".jpg"]) {
+            score += 500;
+        } else if ([lowerURL containsString:@".mp3"]) {
+            score += 500;
+        }
+
+        for (NSInteger index = 0; index < qualityHints.count; index++) {
+            NSString *hint = qualityHints[index];
+            if ([lowerURL containsString:hint]) {
+                score += (NSInteger)(qualityHints.count - index) * 100;
+                break;
+            }
+        }
+
+        if ([lowerURL containsString:@"low"] || [lowerURL containsString:@"lowest"] || [lowerURL containsString:@"playwm"]) {
+            score -= 300;
+        }
+
+        if (score > bestScore) {
+            bestScore = score;
+            bestURL = [NSURL URLWithString:urlString];
         }
     }
 
-    if (bestURL == nil) {
+    if (!bestURL && self.originURLList.count > 0) {
         bestURL = [NSURL URLWithString:[self.originURLList firstObject]];
     }
 
@@ -6018,6 +6049,7 @@ static NSHashTable *processedParentViews = nil;
                                       [DYYYManager downloadMedia:downloadURL
                                                        mediaType:MediaTypeImage
                                                            audio:nil
+                                                      awemeModel:awemeModel
                                                       completion:^(BOOL success) {
                                                         if (success) {
                                                         } else {
@@ -6039,9 +6071,9 @@ static NSHashTable *processedParentViews = nil;
                               // 视频URL从视频模型获取
                               NSURL *videoURL = nil;
                               if (videoModel && videoModel.playURL && videoModel.playURL.originURLList.count > 0) {
-                                  videoURL = [NSURL URLWithString:videoModel.playURL.originURLList.firstObject];
+                                  videoURL = [videoModel.playURL getDYYYSrcURLDownload];
                               } else if (videoModel && videoModel.h264URL && videoModel.h264URL.originURLList.count > 0) {
-                                  videoURL = [NSURL URLWithString:videoModel.h264URL.originURLList.firstObject];
+                                  videoURL = [videoModel.h264URL getDYYYSrcURLDownload];
                               }
 
                               // 下载实况照片
@@ -6052,12 +6084,30 @@ static NSHashTable *processedParentViews = nil;
                                                       }];
                               }
                           } else {
+                              NSURL *preferredURL = nil;
+                              NSURL *fallbackURL = nil;
+                              if (videoModel.playURL && videoModel.playURL.originURLList.count > 0) {
+                                  preferredURL = [videoModel.playURL getDYYYSrcURLDownload];
+                              }
                               if (videoModel.h264URL && videoModel.h264URL.originURLList.count > 0) {
-                                  NSURL *url = [NSURL URLWithString:videoModel.h264URL.originURLList.firstObject];
-                                  [DYYYManager downloadMedia:url
+                                  fallbackURL = [videoModel.h264URL getDYYYSrcURLDownload];
+                              }
+                              NSURL *downloadURL = preferredURL ?: fallbackURL;
+                              if (downloadURL) {
+                                  [DYYYManager downloadMedia:downloadURL
                                                    mediaType:MediaTypeVideo
                                                        audio:audioURL
+                                                  awemeModel:awemeModel
                                                   completion:^(BOOL success){
+                                                    BOOL shouldFallback = !success && fallbackURL && ![fallbackURL.absoluteString isEqualToString:downloadURL.absoluteString];
+                                                    if (shouldFallback) {
+                                                        [DYYYManager downloadMedia:fallbackURL
+                                                                         mediaType:MediaTypeVideo
+                                                                             audio:audioURL
+                                                                        awemeModel:awemeModel
+                                                                        completion:^(BOOL fallbackSuccess) {
+                                                                        }];
+                                                    }
                                                   }];
                               }
                           }
@@ -6117,7 +6167,7 @@ static NSHashTable *processedParentViews = nil;
                               }
 
                               if (imageURLs.count > 0) {
-                                  [DYYYManager downloadAllImages:imageURLs];
+                                  [DYYYManager downloadAllImages:imageURLs awemeModel:awemeModel];
                               }
 
                               if (livePhotos.count == 0 && imageURLs.count == 0) {
@@ -6156,7 +6206,7 @@ static NSHashTable *processedParentViews = nil;
                                                                                                             }
 
                                                                                                             // 使用封装的方法进行解析下载
-                                                                                                            [DYYYManager parseAndDownloadVideoWithShareLink:shareLink apiKey:apiKey];
+                                                                                                            [DYYYManager parseAndDownloadVideoWithShareLink:shareLink apiKey:apiKey awemeModel:awemeModel];
                                                                                                           }];
                 [actions addObject:apiDownloadAction];
             }
