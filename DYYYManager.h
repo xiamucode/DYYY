@@ -31,6 +31,10 @@
  * @param completion 完成回调
  */
 + (void)saveMedia:(NSURL *)mediaURL mediaType:(MediaType)mediaType completion:(void (^)(BOOL success))completion;
++ (void)saveMedia:(NSURL *)mediaURL
+        mediaType:(MediaType)mediaType
+        awemeModel:(AWEAwemeModel *)awemeModel
+       completion:(void (^)(BOOL success))completion;
 
 /**
  * 保存实况照片
@@ -38,6 +42,7 @@
  * @param videoSourcePath 视频源路径
  */
 - (void)saveLivePhoto:(NSString *)imageSourcePath videoUrl:(NSString *)videoSourcePath;
+- (void)saveLivePhoto:(NSString *)imageSourcePath videoUrl:(NSString *)videoSourcePath mediaInfo:(NSDictionary *)mediaInfo;
 
 #pragma mark - 媒体下载方法
 /**
@@ -47,6 +52,11 @@
  * @param completion 完成回调
  */
 + (void)downloadMedia:(NSURL *)url mediaType:(MediaType)mediaType audio:(NSURL *)audioURL completion:(void (^)(BOOL success))completion;
++ (void)downloadMedia:(NSURL *)url
+            mediaType:(MediaType)mediaType
+                audio:(NSURL *)audioURL
+           awemeModel:(AWEAwemeModel *)awemeModel
+           completion:(void (^)(BOOL success))completion;
 
 /**
  * 带进度的媒体下载
@@ -60,6 +70,12 @@
                             audio:(NSURL *)audioURL
                          progress:(void (^)(float progress))progressBlock
                        completion:(void (^)(BOOL success, NSURL *fileURL))completion;
++ (void)downloadMediaWithProgress:(NSURL *)url
+                        mediaType:(MediaType)mediaType
+                            audio:(NSURL *)audioURL
+                       awemeModel:(AWEAwemeModel *)awemeModel
+                         progress:(void (^)(float progress))progressBlock
+                       completion:(void (^)(BOOL success, NSURL *fileURL))completion;
 
 /**
  * 下载实况照片
@@ -68,6 +84,10 @@
  * @param completion 完成回调
  */
 + (void)downloadLivePhoto:(NSURL *)imageURL videoURL:(NSURL *)videoURL completion:(void (^)(void))completion;
++ (void)downloadLivePhoto:(NSURL *)imageURL
+                 videoURL:(NSURL *)videoURL
+               awemeModel:(AWEAwemeModel *)awemeModel
+               completion:(void (^)(void))completion;
 
 /**
  * 批量下载实况照片
@@ -109,6 +129,7 @@
  * @param imageURLs 图片URL数组
  */
 + (void)downloadAllImages:(NSMutableArray *)imageURLs;
++ (void)downloadAllImages:(NSMutableArray *)imageURLs awemeModel:(AWEAwemeModel *)awemeModel;
 
 /**
  * 带进度的批量图片下载
@@ -119,6 +140,10 @@
 + (void)downloadAllImagesWithProgress:(NSMutableArray *)imageURLs
                              progress:(void (^)(NSInteger current, NSInteger total))progressBlock
                            completion:(void (^)(NSInteger successCount, NSInteger totalCount))completion;
++ (void)downloadAllImagesWithProgress:(NSMutableArray *)imageURLs
+                             awemeModel:(AWEAwemeModel *)awemeModel
+                               progress:(void (^)(NSInteger current, NSInteger total))progressBlock
+                             completion:(void (^)(NSInteger successCount, NSInteger totalCount))completion;
 
 /**
  * 取消所有下载任务
@@ -132,6 +157,9 @@
  * @param apiKey API密钥
  */
 + (void)parseAndDownloadVideoWithShareLink:(NSString *)shareLink apiKey:(NSString *)apiKey;
++ (void)parseAndDownloadVideoWithShareLink:(NSString *)shareLink
+                                    apiKey:(NSString *)apiKey
+                                awemeModel:(AWEAwemeModel *)awemeModel;
 
 /**
  * 批量下载视频和图片资源
