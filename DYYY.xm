@@ -5390,14 +5390,33 @@ static NSHashTable *processedParentViews = nil;
 	%orig;
 }
 
-// 屏蔽底部合集（只对推荐页生效）
+%hook AWEAwemeModel
+
 - (id)mixInfo {
-	BOOL DYYYHideTemplateVideo = DYYYGetBool(@"DYYYHideTemplateVideo");
-	if (DYYYHideTemplateVideo && [self.referString isEqualToString:@"homepage_hot"]) {
-		return nil;
-	}
-	return %orig;
+    BOOL enable = DYYYGetBool(@"DYYYHideTemplateVideo");
+    id orig = %orig;
+
+    if (!enable) return orig;
+    if (!orig) return nil;
+
+    NSString *mixName = nil;
+    if ([orig respondsToSelector:@selector(mixName)]) {
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Warc-performSelector-leaks"
+        mixName = [orig performSelector:@selector(mixName)];
+#pragma clang diagnostic pop
+    }
+
+    // 有合集就干掉
+    if ([mixName isKindOfClass:[NSString class]] && mixName.length > 0) {
+        NSLog(@"[DYYY] hide mixInfo: %@", mixName);
+        return nil;
+    }
+
+    return orig;
 }
+
+%end
 
 // 屏蔽短剧信息（复用屏蔽合集开关，只对推荐页生效）
 - (id)playletInfoModel {
