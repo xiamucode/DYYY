@@ -8354,6 +8354,23 @@ static Class TagViewClass = nil;
 %hook AWEStoryContainerCollectionView
 - (void)layoutSubviews {
     %orig;
+
+    // 评论区打开时，部分动图/实况容器会被缩放并上移，这里统一兜底回正
+    if (dyyyCommentViewVisible) {
+        if (!CGAffineTransformIsIdentity(self.transform)) {
+            self.transform = CGAffineTransformIdentity;
+        }
+        UIView *superView = self.superview;
+        if (superView && superView.bounds.size.width > 0 && superView.bounds.size.height > 0) {
+            BOOL compressedByCommentPanel = self.frame.origin.y > 1.0 || self.frame.origin.x > 1.0 ||
+                                            self.frame.size.width < (superView.bounds.size.width - 1.0) ||
+                                            self.frame.size.height < (superView.bounds.size.height - 1.0);
+            if (compressedByCommentPanel) {
+                self.frame = superView.bounds;
+            }
+        }
+    }
+
     if ([self.subviews count] == 2)
         return;
 
@@ -8923,6 +8940,23 @@ static NSString *const kHideRecentUsersKey = @"DYYYHideSidebarRecentUsers";
         }
     }
     %orig(frame);
+}
+
+- (void)layoutSubviews {
+    %orig;
+    UIView *currentView = (UIView *)self;
+    if (!CGAffineTransformIsIdentity(currentView.transform)) {
+        currentView.transform = CGAffineTransformIdentity;
+    }
+    UIView *superView = currentView.superview;
+    if (superView && superView.bounds.size.width > 0 && superView.bounds.size.height > 0) {
+        BOOL compressedByCommentPanel = currentView.frame.origin.y > 1.0 || currentView.frame.origin.x > 1.0 ||
+                                        currentView.frame.size.width < (superView.bounds.size.width - 1.0) ||
+                                        currentView.frame.size.height < (superView.bounds.size.height - 1.0);
+        if (compressedByCommentPanel) {
+            currentView.frame = superView.bounds;
+        }
+    }
 }
 
 %end
