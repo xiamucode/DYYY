@@ -8898,25 +8898,40 @@ static NSString *const kHideRecentUsersKey = @"DYYYHideSidebarRecentUsers";
 %hook BDMultiContentContainer_ImageContentView
 
 - (void)setTransform:(CGAffineTransform)transform {
-    if (DYYYGetBool(@"DYYYEnableCommentBlur") || DYYYGetBool(@"DYYYEnableFullScreen")) {
-        if (!CGAffineTransformIsIdentity(transform)) {
-            return;
-        }
+    // 评论区弹出时会给动图内容做缩放动画，这里强制保持原始比例
+    if (!CGAffineTransformIsIdentity(transform)) {
+        return;
     }
-    %orig(transform);
+    %orig(CGAffineTransformIdentity);
 }
 
 - (void)setFrame:(CGRect)frame {
-    if (DYYYGetBool(@"DYYYEnableCommentBlur") || DYYYGetBool(@"DYYYEnableFullScreen")) {
-        CGRect screenBounds = [UIScreen mainScreen].bounds;
+    UIView *superView = self.superview;
+    if (superView && superView.bounds.size.width > 0 && superView.bounds.size.height > 0) {
         BOOL compressedByCommentPanel = frame.origin.y > 1.0 || frame.origin.x > 1.0 ||
-                                        frame.size.width < (screenBounds.size.width - 1.0) ||
-                                        frame.size.height < (screenBounds.size.height * 0.95);
+                                        frame.size.width < (superView.bounds.size.width - 1.0) ||
+                                        frame.size.height < (superView.bounds.size.height - 1.0);
         if (compressedByCommentPanel) {
-            return;
+            frame = superView.bounds;
         }
     }
     %orig(frame);
+}
+
+- (void)layoutSubviews {
+    %orig;
+    if (!CGAffineTransformIsIdentity(self.transform)) {
+        self.transform = CGAffineTransformIdentity;
+    }
+    UIView *superView = self.superview;
+    if (superView && superView.bounds.size.width > 0 && superView.bounds.size.height > 0) {
+        BOOL compressed = self.frame.origin.y > 1.0 || self.frame.origin.x > 1.0 ||
+                          self.frame.size.width < (superView.bounds.size.width - 1.0) ||
+                          self.frame.size.height < (superView.bounds.size.height - 1.0);
+        if (compressed && !CGRectEqualToRect(self.frame, superView.bounds)) {
+            self.frame = superView.bounds;
+        }
+    }
 }
 
 %end
@@ -8925,77 +8940,40 @@ static NSString *const kHideRecentUsersKey = @"DYYYHideSidebarRecentUsers";
 %hook AWEStoryContainerCollectionView
 
 - (void)setTransform:(CGAffineTransform)transform {
-    if (DYYYGetBool(@"DYYYEnableCommentBlur") || DYYYGetBool(@"DYYYEnableFullScreen")) {
-        if (!CGAffineTransformIsIdentity(transform)) {
-            return;
-        }
+    // 评论区弹出时会触发 setTransform 缩放，这里统一拦截
+    if (!CGAffineTransformIsIdentity(transform)) {
+        return;
     }
-    %orig(transform);
+    %orig(CGAffineTransformIdentity);
 }
 
 - (void)setFrame:(CGRect)frame {
-    if (DYYYGetBool(@"DYYYEnableCommentBlur") || DYYYGetBool(@"DYYYEnableFullScreen")) {
-        CGRect screenBounds = [UIScreen mainScreen].bounds;
+    UIView *superView = self.superview;
+    if (superView && superView.bounds.size.width > 0 && superView.bounds.size.height > 0) {
         BOOL compressedByCommentPanel = frame.origin.y > 1.0 || frame.origin.x > 1.0 ||
-                                        frame.size.width < (screenBounds.size.width - 1.0) ||
-                                        frame.size.height < (screenBounds.size.height * 0.95);
+                                        frame.size.width < (superView.bounds.size.width - 1.0) ||
+                                        frame.size.height < (superView.bounds.size.height - 1.0);
         if (compressedByCommentPanel) {
-            return;
+            frame = superView.bounds;
         }
     }
     %orig(frame);
 }
 
-%end
-
-%hook AWEFeedTableViewCellContentView
-
-- (void)setTransform:(CGAffineTransform)transform {
-    if (DYYYGetBool(@"DYYYEnableCommentBlur") || DYYYGetBool(@"DYYYEnableFullScreen")) {
-        if (!CGAffineTransformIsIdentity(transform)) {
-            return;
+- (void)layoutSubviews {
+    %orig;
+    if (!CGAffineTransformIsIdentity(self.transform)) {
+        self.transform = CGAffineTransformIdentity;
+    }
+    UIView *superView = self.superview;
+    if (superView && superView.bounds.size.width > 0 && superView.bounds.size.height > 0) {
+        BOOL compressed = self.frame.origin.y > 1.0 || self.frame.origin.x > 1.0 ||
+                          self.frame.size.width < (superView.bounds.size.width - 1.0) ||
+                          self.frame.size.height < (superView.bounds.size.height - 1.0);
+        if (compressed && !CGRectEqualToRect(self.frame, superView.bounds)) {
+            self.frame = superView.bounds;
         }
     }
-    %orig(transform);
-}
-
-%end
-
-%hook AWEFeedVideoContentView
-
-- (void)setTransform:(CGAffineTransform)transform {
-    if (DYYYGetBool(@"DYYYEnableCommentBlur") || DYYYGetBool(@"DYYYEnableFullScreen")) {
-        if (!CGAffineTransformIsIdentity(transform)) {
-            return;
-        }
-    }
-    %orig(transform);
-}
-
-%end
-
-%hook AWEFeedImageContentView
-
-- (void)setTransform:(CGAffineTransform)transform {
-    if (DYYYGetBool(@"DYYYEnableCommentBlur") || DYYYGetBool(@"DYYYEnableFullScreen")) {
-        if (!CGAffineTransformIsIdentity(transform)) {
-            return;
-        }
-    }
-    %orig(transform);
-}
-
-%end
-
-%hook AWEFeedMixContentView
-
-- (void)setTransform:(CGAffineTransform)transform {
-    if (DYYYGetBool(@"DYYYEnableCommentBlur") || DYYYGetBool(@"DYYYEnableFullScreen")) {
-        if (!CGAffineTransformIsIdentity(transform)) {
-            return;
-        }
-    }
-    %orig(transform);
 }
 
 %end
