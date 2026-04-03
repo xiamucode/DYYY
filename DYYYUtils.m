@@ -1527,7 +1527,12 @@ static void DYYYApplyDisplayLocationToLabel(UILabel *label, NSString *displayLoc
     [[PHPhotoLibrary sharedPhotoLibrary]
         performChanges:^{
           PHAssetCreationRequest *request = [PHAssetCreationRequest creationRequestForAsset];
-          [request addResourceWithType:PHAssetResourceTypePhoto fileURL:fileURL options:nil];
+          PHAssetResourceCreationOptions *options = [[PHAssetResourceCreationOptions alloc] init];
+          options.uniformTypeIdentifier = @"com.compuserve.gif";
+          if (fileURL.lastPathComponent.length > 0) {
+              options.originalFilename = fileURL.lastPathComponent;
+          }
+          [request addResourceWithType:PHAssetResourceTypePhoto fileURL:fileURL options:options];
         }
         completionHandler:^(BOOL success, NSError *_Nullable error) {
           dispatch_async(dispatch_get_main_queue(), ^{
@@ -1546,11 +1551,13 @@ static void DYYYApplyDisplayLocationToLabel(UILabel *label, NSString *displayLoc
 + (void)saveGifToPhotoLibrary:(NSURL *)gifURL completion:(void (^)(BOOL success))completion {
     [[PHPhotoLibrary sharedPhotoLibrary]
         performChanges:^{
-          NSData *gifData = [NSData dataWithContentsOfURL:gifURL];
           PHAssetCreationRequest *request = [PHAssetCreationRequest creationRequestForAsset];
           PHAssetResourceCreationOptions *options = [[PHAssetResourceCreationOptions alloc] init];
           options.uniformTypeIdentifier = @"com.compuserve.gif";
-          [request addResourceWithType:PHAssetResourceTypePhoto data:gifData options:options];
+          if (gifURL.lastPathComponent.length > 0) {
+              options.originalFilename = gifURL.lastPathComponent;
+          }
+          [request addResourceWithType:PHAssetResourceTypePhoto fileURL:gifURL options:options];
         }
         completionHandler:^(BOOL success, NSError *_Nullable error) {
           dispatch_async(dispatch_get_main_queue(), ^{

@@ -7233,7 +7233,13 @@ static Class tabBarButtonClass = nil;
                      (PlayVCClass3 && [vc isKindOfClass:PlayVCClass3]));
 
     if (isPlayVC && enableBlur) {
-        if (frame.origin.x != 0) {
+        CGRect superFrame = self.superview.bounds;
+        BOOL compressedByComment = frame.origin.x > 0.5 || frame.origin.y > 0.5;
+        if (!compressedByComment && superFrame.size.width > 0 && superFrame.size.height > 0) {
+            compressedByComment = frame.size.width < (superFrame.size.width - 1.0) ||
+                                  frame.size.height < (superFrame.size.height - 1.0);
+        }
+        if (compressedByComment) {
             return;
         }
     }
@@ -8898,10 +8904,25 @@ static NSString *const kHideRecentUsersKey = @"DYYYHideSidebarRecentUsers";
 %hook BDMultiContentContainer_ImageContentView
 
 - (void)setTransform:(CGAffineTransform)transform {
-    if (DYYYGetBool(@"DYYYEnableCommentBlur")) {
+    // 评论区弹出时会给动图内容做缩放动画，这里强制保持原始比例
+    if (!CGAffineTransformIsIdentity(transform)) {
         return;
     }
-    %orig(transform);
+    %orig(CGAffineTransformIdentity);
+}
+
+- (void)setFrame:(CGRect)frame {
+    UIView *currentView = (UIView *)self;
+    UIView *superView = currentView.superview;
+    if (superView && superView.bounds.size.width > 0 && superView.bounds.size.height > 0) {
+        BOOL compressedByCommentPanel = frame.origin.y > 1.0 || frame.origin.x > 1.0 ||
+                                        frame.size.width < (superView.bounds.size.width - 1.0) ||
+                                        frame.size.height < (superView.bounds.size.height - 1.0);
+        if (compressedByCommentPanel) {
+            frame = superView.bounds;
+        }
+    }
+    %orig(frame);
 }
 
 %end
@@ -8909,10 +8930,22 @@ static NSString *const kHideRecentUsersKey = @"DYYYHideSidebarRecentUsers";
 
 %hook AWEStoryContainerCollectionView
 
+- (void)setTransform:(CGAffineTransform)transform {
+    // 评论区弹出时会触发 setTransform 缩放，这里统一拦截
+    if (!CGAffineTransformIsIdentity(transform)) {
+        return;
+    }
+    %orig(CGAffineTransformIdentity);
+}
+
 - (void)setFrame:(CGRect)frame {
-    if (DYYYGetBool(@"DYYYEnableCommentBlur")) {
-        if (frame.origin.y != 0) {
-            return;
+    UIView *superView = self.superview;
+    if (superView && superView.bounds.size.width > 0 && superView.bounds.size.height > 0) {
+        BOOL compressedByCommentPanel = frame.origin.y > 1.0 || frame.origin.x > 1.0 ||
+                                        frame.size.width < (superView.bounds.size.width - 1.0) ||
+                                        frame.size.height < (superView.bounds.size.height - 1.0);
+        if (compressedByCommentPanel) {
+            frame = superView.bounds;
         }
     }
     %orig(frame);
