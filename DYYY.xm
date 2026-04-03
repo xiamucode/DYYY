@@ -5109,14 +5109,38 @@ static NSHashTable *processedParentViews = nil;
     if (isRecommendFeed) {
         // 过滤包含特定关键词的视频
         if (keywordsList.count > 0) {
-            // 检查视频标题
+            NSMutableString *sourceText = [NSMutableString string];
             if (self.descriptionString.length > 0) {
-                for (NSString *keyword in keywordsList) {
-                    NSString *trimmedKeyword = [keyword stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceAndNewlineCharacterSet]];
-                    if (trimmedKeyword.length > 0 && [self.descriptionString containsString:trimmedKeyword]) {
-                        shouldFilterKeywords = YES;
-                        break;
+                [sourceText appendString:self.descriptionString];
+                [sourceText appendString:@" "];
+            }
+            if ([self respondsToSelector:@selector(textExtras)]) {
+                NSArray *textExtras = [self textExtras];
+                for (id extra in textExtras) {
+                    if ([extra respondsToSelector:NSSelectorFromString(@"hashtagName")]) {
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Warc-performSelector-leaks"
+                        NSString *tag = [extra performSelector:NSSelectorFromString(@"hashtagName")];
+#pragma clang diagnostic pop
+                        if ([tag isKindOfClass:[NSString class]] && tag.length > 0) {
+                            [sourceText appendString:tag];
+                            [sourceText appendString:@" "];
+                        }
                     }
+                }
+            }
+
+            NSString *normalizedSource = [self dyyy_normalizedFilterText:sourceText];
+            for (NSString *keyword in keywordsList) {
+                NSString *trimmedKeyword = [keyword stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceAndNewlineCharacterSet]];
+                if (trimmedKeyword.length == 0) {
+                    continue;
+                }
+
+                NSString *normalizedKeyword = [self dyyy_normalizedFilterText:trimmedKeyword];
+                if (normalizedKeyword.length > 0 && [normalizedSource containsString:normalizedKeyword]) {
+                    shouldFilterKeywords = YES;
+                    break;
                 }
             }
         }
@@ -5152,6 +5176,25 @@ static NSHashTable *processedParentViews = nil;
     }
     return shouldFilterAds || shouldFilterAllLive || shouldFilterHotSpot || shouldFilterHDR || shouldFilterKeywords || shouldFilterProp ||
            shouldFilterTime || shouldFilterUser;
+}
+
+%new
+- (NSString *)dyyy_normalizedFilterText:(NSString *)text {
+    if (![text isKindOfClass:[NSString class]] || text.length == 0) {
+        return @"";
+    }
+    NSString *normalized = text.lowercaseString;
+    NSCharacterSet *trimSet = [NSCharacterSet whitespaceAndNewlineCharacterSet];
+    normalized = [normalized stringByTrimmingCharactersInSet:trimSet];
+    if (normalized.length == 0) {
+        return @"";
+    }
+
+    NSRegularExpression *regex = [NSRegularExpression regularExpressionWithPattern:@"[\\s#＃\\.,，。!！?？:：;；\\-_/\\\\\\|\\[\\]\\(\\)\\{\\}]+"
+                                                                           options:0
+                                                                             error:nil];
+    normalized = [regex stringByReplacingMatchesInString:normalized options:0 range:NSMakeRange(0, normalized.length) withTemplate:@""];
+    return normalized ?: @"";
 }
 
 - (AWEECommerceLabel *)ecommerceBelowLabel {
@@ -7232,7 +7275,7 @@ static Class tabBarButtonClass = nil;
                      (PlayVCClass2 && [vc isKindOfClass:PlayVCClass2]) ||
                      (PlayVCClass3 && [vc isKindOfClass:PlayVCClass3]));
 
-    if (isPlayVC && enableBlur) {
+    if ((isPlayVC || isDetailVC) && enableBlur) {
         CGRect superFrame = self.superview.bounds;
         BOOL compressedByComment = frame.origin.x > 0.5 || frame.origin.y > 0.5;
         if (!compressedByComment && superFrame.size.width > 0 && superFrame.size.height > 0) {
