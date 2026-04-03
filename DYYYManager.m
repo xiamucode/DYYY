@@ -1367,23 +1367,56 @@
                       complete:^(BOOL success, NSString *photoFile, NSString *videoFile, NSError *error) {
                         NSURL *photo = [NSURL fileURLWithPath:photoFile];
                         NSURL *video = [NSURL fileURLWithPath:videoFile];
-                        [[PHPhotoLibrary sharedPhotoLibrary]
-                            performChanges:^{
-                              PHAssetCreationRequest *request = [PHAssetCreationRequest creationRequestForAsset];
-                              [request addResourceWithType:PHAssetResourceTypePhoto fileURL:photo options:nil];
-                              [request addResourceWithType:PHAssetResourceTypePairedVideo fileURL:video options:nil];
-                            }
-                            completionHandler:^(BOOL success, NSError *_Nullable error) {
-                              dispatch_async(dispatch_get_main_queue(), ^{
-                                if (success) {
-                                    // 删除临时文件
-                                    [[NSFileManager defaultManager] removeItemAtPath:imageSourcePath error:nil];
-                                    [[NSFileManager defaultManager] removeItemAtPath:videoSourcePath error:nil];
-                                    [[NSFileManager defaultManager] removeItemAtPath:photoFile error:nil];
-                                    [[NSFileManager defaultManager] removeItemAtPath:videoFile error:nil];
+
+                        void (^persistLivePhotoToAlbum)(NSURL *, NSURL *) = ^(NSURL *photoURLForSave, NSURL *videoURLForSave) {
+                            [[PHPhotoLibrary sharedPhotoLibrary]
+                                performChanges:^{
+                                  PHAssetCreationRequest *request = [PHAssetCreationRequest creationRequestForAsset];
+                                  PHAssetResourceCreationOptions *photoOptions = [[PHAssetResourceCreationOptions alloc] init];
+                                  PHAssetResourceCreationOptions *videoOptions = [[PHAssetResourceCreationOptions alloc] init];
+                                  if (photoURLForSave.lastPathComponent.length > 0) {
+                                      photoOptions.originalFilename = photoURLForSave.lastPathComponent;
+                                  }
+                                  if (videoURLForSave.lastPathComponent.length > 0) {
+                                      videoOptions.originalFilename = videoURLForSave.lastPathComponent;
+                                  }
+                                  [request addResourceWithType:PHAssetResourceTypePhoto fileURL:photoURLForSave options:photoOptions];
+                                  [request addResourceWithType:PHAssetResourceTypePairedVideo fileURL:videoURLForSave options:videoOptions];
                                 }
-                              });
-                            }];
+                                completionHandler:^(BOOL success, NSError *_Nullable error) {
+                                  dispatch_async(dispatch_get_main_queue(), ^{
+                                    if (success) {
+                                        [[NSFileManager defaultManager] removeItemAtPath:imageSourcePath error:nil];
+                                        [[NSFileManager defaultManager] removeItemAtPath:videoSourcePath error:nil];
+                                        [[NSFileManager defaultManager] removeItemAtPath:photoFile error:nil];
+                                        [[NSFileManager defaultManager] removeItemAtPath:videoFile error:nil];
+                                        if (photoURLForSave.path.length > 0 && ![photoURLForSave.path isEqualToString:photoFile]) {
+                                            [[NSFileManager defaultManager] removeItemAtPath:photoURLForSave.path error:nil];
+                                        }
+                                        if (videoURLForSave.path.length > 0 && ![videoURLForSave.path isEqualToString:videoFile]) {
+                                            [[NSFileManager defaultManager] removeItemAtPath:videoURLForSave.path error:nil];
+                                        }
+                                    }
+                                  });
+                                }];
+                        };
+
+                        if (mediaInfo.count > 0) {
+                            [DYYYUtils writeMediaInfo:mediaInfo
+                                         toImageAtURL:photo
+                                           completion:^(BOOL photoRenameSuccess, NSURL *photoOutputURL) {
+                                             NSURL *resolvedPhotoURL = (photoRenameSuccess && photoOutputURL) ? photoOutputURL : photo;
+                                             [DYYYUtils writeMediaInfo:mediaInfo
+                                                          toVideoAtURL:video
+                                                            completion:^(BOOL videoRenameSuccess, NSURL *videoOutputURL) {
+                                                              NSURL *resolvedVideoURL = (videoRenameSuccess && videoOutputURL) ? videoOutputURL : video;
+                                                              persistLivePhotoToAlbum(resolvedPhotoURL, resolvedVideoURL);
+                                                            }];
+                                           }];
+                            return;
+                        }
+
+                        persistLivePhotoToAlbum(photo, video);
                       }];
         }];
     } else {

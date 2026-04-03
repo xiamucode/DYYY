@@ -7233,7 +7233,13 @@ static Class tabBarButtonClass = nil;
                      (PlayVCClass3 && [vc isKindOfClass:PlayVCClass3]));
 
     if (isPlayVC && enableBlur) {
-        if (frame.origin.x != 0) {
+        CGRect superFrame = self.superview.bounds;
+        BOOL compressedByComment = frame.origin.x > 0.5 || frame.origin.y > 0.5;
+        if (!compressedByComment && superFrame.size.width > 0 && superFrame.size.height > 0) {
+            compressedByComment = frame.size.width < (superFrame.size.width - 1.0) ||
+                                  frame.size.height < (superFrame.size.height - 1.0);
+        }
+        if (compressedByComment) {
             return;
         }
     }
