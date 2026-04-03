@@ -7268,6 +7268,25 @@ static Class tabBarButtonClass = nil;
     BOOL enableBlur = DYYYGetBool(@"DYYYEnableCommentBlur");
     BOOL enableFS = DYYYGetBool(@"DYYYEnableFullScreen");
 
+    if (dyyyCommentViewVisible) {
+        NSString *className = NSStringFromClass([self class]);
+        BOOL isMediaContainerClass = [className containsString:@"StoryContainerCollectionView"] ||
+                                     [className containsString:@"ImageContentView"] ||
+                                     [className containsString:@"MultiContentContainer"] ||
+                                     [className containsString:@"FeedVideoContentView"];
+        if (isMediaContainerClass) {
+            CGRect superFrame = self.superview.bounds;
+            if (superFrame.size.width > 0 && superFrame.size.height > 0) {
+                BOOL compressedByCommentPanel = frame.origin.x > 0.5 || frame.origin.y > 0.5 ||
+                                                frame.size.width < (superFrame.size.width - 1.0) ||
+                                                frame.size.height < (superFrame.size.height - 1.0);
+                if (compressedByCommentPanel) {
+                    return;
+                }
+            }
+        }
+    }
+
     UIViewController *vc = [DYYYUtils firstAvailableViewControllerFromView:self];
     Class DetailVCClass = NSClassFromString(@"AWEMixVideoPanelDetailTableViewController");
     Class PlayVCClass1 = NSClassFromString(@"AWEAwemePlayVideoViewController");
