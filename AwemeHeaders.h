@@ -502,6 +502,18 @@ typedef NS_ENUM(NSUInteger, DYEdgeMode) {
 @interface AWEStoryContainerCollectionView : UIView
 @end
 
+@interface AWEFeedTableViewCellContentView : UIView
+@end
+
+@interface AWEFeedVideoContentView : UIView
+@end
+
+@interface AWEFeedImageContentView : UIView
+@end
+
+@interface AWEFeedMixContentView : UIView
+@end
+
 @interface AWELiveNewPreStreamViewController : UIViewController
 @end
 

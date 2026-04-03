@@ -8898,10 +8898,25 @@ static NSString *const kHideRecentUsersKey = @"DYYYHideSidebarRecentUsers";
 %hook BDMultiContentContainer_ImageContentView
 
 - (void)setTransform:(CGAffineTransform)transform {
-    if (DYYYGetBool(@"DYYYEnableCommentBlur")) {
-        return;
+    if (DYYYGetBool(@"DYYYEnableCommentBlur") || DYYYGetBool(@"DYYYEnableFullScreen")) {
+        if (!CGAffineTransformIsIdentity(transform)) {
+            return;
+        }
     }
     %orig(transform);
+}
+
+- (void)setFrame:(CGRect)frame {
+    if (DYYYGetBool(@"DYYYEnableCommentBlur") || DYYYGetBool(@"DYYYEnableFullScreen")) {
+        CGRect screenBounds = [UIScreen mainScreen].bounds;
+        BOOL compressedByCommentPanel = frame.origin.y > 1.0 || frame.origin.x > 1.0 ||
+                                        frame.size.width < (screenBounds.size.width - 1.0) ||
+                                        frame.size.height < (screenBounds.size.height * 0.95);
+        if (compressedByCommentPanel) {
+            return;
+        }
+    }
+    %orig(frame);
 }
 
 %end
@@ -8909,13 +8924,78 @@ static NSString *const kHideRecentUsersKey = @"DYYYHideSidebarRecentUsers";
 
 %hook AWEStoryContainerCollectionView
 
+- (void)setTransform:(CGAffineTransform)transform {
+    if (DYYYGetBool(@"DYYYEnableCommentBlur") || DYYYGetBool(@"DYYYEnableFullScreen")) {
+        if (!CGAffineTransformIsIdentity(transform)) {
+            return;
+        }
+    }
+    %orig(transform);
+}
+
 - (void)setFrame:(CGRect)frame {
-    if (DYYYGetBool(@"DYYYEnableCommentBlur")) {
-        if (frame.origin.y != 0) {
+    if (DYYYGetBool(@"DYYYEnableCommentBlur") || DYYYGetBool(@"DYYYEnableFullScreen")) {
+        CGRect screenBounds = [UIScreen mainScreen].bounds;
+        BOOL compressedByCommentPanel = frame.origin.y > 1.0 || frame.origin.x > 1.0 ||
+                                        frame.size.width < (screenBounds.size.width - 1.0) ||
+                                        frame.size.height < (screenBounds.size.height * 0.95);
+        if (compressedByCommentPanel) {
             return;
         }
     }
     %orig(frame);
+}
+
+%end
+
+%hook AWEFeedTableViewCellContentView
+
+- (void)setTransform:(CGAffineTransform)transform {
+    if (DYYYGetBool(@"DYYYEnableCommentBlur") || DYYYGetBool(@"DYYYEnableFullScreen")) {
+        if (!CGAffineTransformIsIdentity(transform)) {
+            return;
+        }
+    }
+    %orig(transform);
+}
+
+%end
+
+%hook AWEFeedVideoContentView
+
+- (void)setTransform:(CGAffineTransform)transform {
+    if (DYYYGetBool(@"DYYYEnableCommentBlur") || DYYYGetBool(@"DYYYEnableFullScreen")) {
+        if (!CGAffineTransformIsIdentity(transform)) {
+            return;
+        }
+    }
+    %orig(transform);
+}
+
+%end
+
+%hook AWEFeedImageContentView
+
+- (void)setTransform:(CGAffineTransform)transform {
+    if (DYYYGetBool(@"DYYYEnableCommentBlur") || DYYYGetBool(@"DYYYEnableFullScreen")) {
+        if (!CGAffineTransformIsIdentity(transform)) {
+            return;
+        }
+    }
+    %orig(transform);
+}
+
+%end
+
+%hook AWEFeedMixContentView
+
+- (void)setTransform:(CGAffineTransform)transform {
+    if (DYYYGetBool(@"DYYYEnableCommentBlur") || DYYYGetBool(@"DYYYEnableFullScreen")) {
+        if (!CGAffineTransformIsIdentity(transform)) {
+            return;
+        }
+    }
+    %orig(transform);
 }
 
 %end

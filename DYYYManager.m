@@ -233,6 +233,38 @@
           });
       };
 
+      void (^persistGifMedia)(NSURL *) = ^(NSURL *gifSourceURL) {
+          if (!gifSourceURL) {
+              reportResult(mediaURL, NO);
+              return;
+          }
+
+          void (^saveGifAtURL)(NSURL *, NSURL *) = ^(NSURL *gifURLToSave, NSURL *temporarySourceURL) {
+              [DYYYUtils saveGifToPhotoLibrary:gifURLToSave
+                                    completion:^(BOOL gifSuccess) {
+                                      if (temporarySourceURL && ![temporarySourceURL.path isEqualToString:gifURLToSave.path]) {
+                                          [[NSFileManager defaultManager] removeItemAtPath:temporarySourceURL.path error:nil];
+                                      }
+                                      reportResult(mediaURL, gifSuccess);
+                                    }];
+          };
+
+          if (mediaInfo.count > 0) {
+              [DYYYUtils writeMediaInfo:mediaInfo
+                           toImageAtURL:gifSourceURL
+                             completion:^(BOOL success, NSURL *outputURL) {
+                               if (success && outputURL) {
+                                   saveGifAtURL(outputURL, gifSourceURL);
+                               } else {
+                                   saveGifAtURL(gifSourceURL, nil);
+                               }
+                             }];
+              return;
+          }
+
+          saveGifAtURL(gifSourceURL, nil);
+      };
+
       if (mediaType == MediaTypeHeic) {
           NSString *actualFormat = [DYYYUtils detectFileFormat:mediaURL];
 
@@ -240,11 +272,8 @@
               [DYYYUtils convertWebpToGifSafely:mediaURL
                                      completion:^(NSURL *gifURL, BOOL success) {
                                   if (success && gifURL) {
-                                      [DYYYUtils saveGifToPhotoLibrary:gifURL
-                                                            completion:^(BOOL gifSuccess) {
-                                                         [[NSFileManager defaultManager] removeItemAtPath:mediaURL.path error:nil];
-                                                         reportResult(mediaURL, gifSuccess);
-                                                       }];
+                                      persistGifMedia(gifURL);
+                                      [[NSFileManager defaultManager] removeItemAtPath:mediaURL.path error:nil];
                                   } else {
                                       dispatch_async(dispatch_get_main_queue(), ^{
                                         [DYYYUtils showToast:@"转换失败"];
@@ -260,11 +289,8 @@
               [DYYYUtils convertHeicToGif:mediaURL
                                completion:^(NSURL *gifURL, BOOL success) {
                             if (success && gifURL) {
-                                [DYYYUtils saveGifToPhotoLibrary:gifURL
-                                                      completion:^(BOOL gifSuccess) {
-                                                   [[NSFileManager defaultManager] removeItemAtPath:mediaURL.path error:nil];
-                                                   reportResult(mediaURL, gifSuccess);
-                                                 }];
+                                persistGifMedia(gifURL);
+                                [[NSFileManager defaultManager] removeItemAtPath:mediaURL.path error:nil];
                             } else {
                                 dispatch_async(dispatch_get_main_queue(), ^{
                                   [DYYYUtils showToast:@"转换失败"];
@@ -277,10 +303,7 @@
           }
 
           if ([actualFormat isEqualToString:@"gif"]) {
-              [DYYYUtils saveGifToPhotoLibrary:mediaURL
-                                    completion:^(BOOL gifSuccess) {
-                                 reportResult(mediaURL, gifSuccess);
-                               }];
+              persistGifMedia(mediaURL);
               return;
           }
 
