@@ -25,6 +25,10 @@
 #import "DYYYToast.h"
 #import "DYYYUtils.h"
 
+@interface AWEAwemeModel (DYYYFilterTextNormalization)
+- (NSString *)dyyy_normalizedFilterText:(NSString *)text;
+@end
+
 static CGFloat gStartY = 0.0;
 static CGFloat gStartVal = 0.0;
 static DYEdgeMode gMode = DYEdgeModeNone;
@@ -8959,7 +8963,7 @@ static NSString *const kHideRecentUsersKey = @"DYYYHideSidebarRecentUsers";
 %end
 %end
 
-// View scaling fix when comment blur is enabled
+// 评论区毛玻璃开启时的媒体缩放修复
 %group BDMultiContentImageViewGroup
 %hook BDMultiContentContainer_ImageContentView
 
