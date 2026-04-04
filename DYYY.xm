@@ -7175,21 +7175,33 @@ static Class tabBarButtonClass = nil;
         return;
     }
 
+    void (^normalizeViewIfCompressed)(UIView *) = ^(UIView *targetView) {
+      if (!targetView) {
+          return;
+      }
+      if (!CGAffineTransformIsIdentity(targetView.transform)) {
+          targetView.transform = CGAffineTransformIdentity;
+      }
+      UIView *targetSuperView = targetView.superview;
+      if (!targetSuperView || targetSuperView.bounds.size.width <= 0 || targetSuperView.bounds.size.height <= 0) {
+          return;
+      }
+      BOOL compressed = targetView.frame.origin.x > 1.0 || targetView.frame.origin.y > 1.0 ||
+                        targetView.frame.size.width < (targetSuperView.bounds.size.width - 1.0) ||
+                        targetView.frame.size.height < (targetSuperView.bounds.size.height - 1.0);
+      if (compressed) {
+          targetView.frame = targetSuperView.bounds;
+      }
+    };
+
     Class storyClass = %c(AWEStoryContainerCollectionView);
     NSArray<UIView *> *storyViews = [DYYYUtils findAllSubviewsOfClass:storyClass inContainer:activeWindow];
     for (UIView *view in storyViews) {
-        if (!CGAffineTransformIsIdentity(view.transform)) {
-            view.transform = CGAffineTransformIdentity;
-        }
-        UIView *superView = view.superview;
-        if (!superView || superView.bounds.size.width <= 0 || superView.bounds.size.height <= 0) {
-            continue;
-        }
-        BOOL compressed = view.frame.origin.x > 1.0 || view.frame.origin.y > 1.0 ||
-                          view.frame.size.width < (superView.bounds.size.width - 1.0) ||
-                          view.frame.size.height < (superView.bounds.size.height - 1.0);
-        if (compressed) {
-            view.frame = superView.bounds;
+        normalizeViewIfCompressed(view);
+        UIView *parent = view.superview;
+        for (NSInteger depth = 0; depth < 2 && parent; depth++) {
+            normalizeViewIfCompressed(parent);
+            parent = parent.superview;
         }
     }
 
@@ -7197,18 +7209,11 @@ static Class tabBarButtonClass = nil;
     if (imageContentClass) {
         NSArray<UIView *> *imageViews = [DYYYUtils findAllSubviewsOfClass:imageContentClass inContainer:activeWindow];
         for (UIView *view in imageViews) {
-            if (!CGAffineTransformIsIdentity(view.transform)) {
-                view.transform = CGAffineTransformIdentity;
-            }
-            UIView *superView = view.superview;
-            if (!superView || superView.bounds.size.width <= 0 || superView.bounds.size.height <= 0) {
-                continue;
-            }
-            BOOL compressed = view.frame.origin.x > 1.0 || view.frame.origin.y > 1.0 ||
-                              view.frame.size.width < (superView.bounds.size.width - 1.0) ||
-                              view.frame.size.height < (superView.bounds.size.height - 1.0);
-            if (compressed) {
-                view.frame = superView.bounds;
+            normalizeViewIfCompressed(view);
+            UIView *parent = view.superview;
+            for (NSInteger depth = 0; depth < 2 && parent; depth++) {
+                normalizeViewIfCompressed(parent);
+                parent = parent.superview;
             }
         }
     }
