@@ -29,6 +29,10 @@
 - (NSString *)dyyy_normalizedFilterText:(NSString *)text;
 @end
 
+@interface AWECommentContainerViewController (DYYYMediaScaleFix)
+- (void)dyyy_fixMediaScaleIfNeeded;
+@end
+
 static CGFloat gStartY = 0.0;
 static CGFloat gStartVal = 0.0;
 static DYEdgeMode gMode = DYEdgeModeNone;
