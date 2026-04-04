@@ -7073,6 +7073,13 @@ static Class tabBarButtonClass = nil;
 - (void)viewDidAppear:(BOOL)animated {
     %orig;
     dyyyCommentViewVisible = YES;
+    [self dyyy_fixMediaScaleIfNeeded];
+    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.08 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+      [self dyyy_fixMediaScaleIfNeeded];
+    });
+    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.18 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+      [self dyyy_fixMediaScaleIfNeeded];
+    });
     updateSpeedButtonVisibility();
     updateClearButtonVisibility();
     NSString *transparentValue = [[NSUserDefaults standardUserDefaults] objectForKey:@"DYYYTopBarTransparent"];
@@ -7102,6 +7109,7 @@ static Class tabBarButtonClass = nil;
 
 - (void)viewDidLayoutSubviews {
     %orig;
+    [self dyyy_fixMediaScaleIfNeeded];
 
     if (!DYYYGetBool(@"DYYYEnableCommentBlur"))
         return;
@@ -7151,6 +7159,52 @@ static Class tabBarButtonClass = nil;
                 if (subview.hidden == NO && subview.backgroundColor && CGColorGetAlpha(subview.backgroundColor.CGColor) == 1) {
                     [DYYYUtils applyBlurEffectToView:subview transparency:0.2f blurViewTag:999];
                 }
+            }
+        }
+    }
+}
+
+%new
+- (void)dyyy_fixMediaScaleIfNeeded {
+    UIWindow *activeWindow = [DYYYUtils getActiveWindow];
+    if (!activeWindow) {
+        return;
+    }
+
+    Class storyClass = %c(AWEStoryContainerCollectionView);
+    NSArray<UIView *> *storyViews = [DYYYUtils findAllSubviewsOfClass:storyClass inContainer:activeWindow];
+    for (UIView *view in storyViews) {
+        if (!CGAffineTransformIsIdentity(view.transform)) {
+            view.transform = CGAffineTransformIdentity;
+        }
+        UIView *superView = view.superview;
+        if (!superView || superView.bounds.size.width <= 0 || superView.bounds.size.height <= 0) {
+            continue;
+        }
+        BOOL compressed = view.frame.origin.x > 1.0 || view.frame.origin.y > 1.0 ||
+                          view.frame.size.width < (superView.bounds.size.width - 1.0) ||
+                          view.frame.size.height < (superView.bounds.size.height - 1.0);
+        if (compressed) {
+            view.frame = superView.bounds;
+        }
+    }
+
+    Class imageContentClass = objc_getClass("BDMultiContentContainer.ImageContentView");
+    if (imageContentClass) {
+        NSArray<UIView *> *imageViews = [DYYYUtils findAllSubviewsOfClass:imageContentClass inContainer:activeWindow];
+        for (UIView *view in imageViews) {
+            if (!CGAffineTransformIsIdentity(view.transform)) {
+                view.transform = CGAffineTransformIdentity;
+            }
+            UIView *superView = view.superview;
+            if (!superView || superView.bounds.size.width <= 0 || superView.bounds.size.height <= 0) {
+                continue;
+            }
+            BOOL compressed = view.frame.origin.x > 1.0 || view.frame.origin.y > 1.0 ||
+                              view.frame.size.width < (superView.bounds.size.width - 1.0) ||
+                              view.frame.size.height < (superView.bounds.size.height - 1.0);
+            if (compressed) {
+                view.frame = superView.bounds;
             }
         }
     }
