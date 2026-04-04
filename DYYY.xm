@@ -25,14 +25,6 @@
 #import "DYYYToast.h"
 #import "DYYYUtils.h"
 
-@interface AWEAwemeModel (DYYYFilterTextNormalization)
-- (NSString *)dyyy_normalizedFilterText:(NSString *)text;
-@end
-
-@interface AWECommentContainerViewController (DYYYMediaScaleFix)
-- (void)dyyy_fixMediaScaleIfNeeded;
-@end
-
 static CGFloat gStartY = 0.0;
 static CGFloat gStartVal = 0.0;
 static DYEdgeMode gMode = DYEdgeModeNone;
@@ -5117,38 +5109,14 @@ static NSHashTable *processedParentViews = nil;
     if (isRecommendFeed) {
         // 过滤包含特定关键词的视频
         if (keywordsList.count > 0) {
-            NSMutableString *sourceText = [NSMutableString string];
+            // 检查视频标题
             if (self.descriptionString.length > 0) {
-                [sourceText appendString:self.descriptionString];
-                [sourceText appendString:@" "];
-            }
-            if ([self respondsToSelector:@selector(textExtras)]) {
-                NSArray *textExtras = [self textExtras];
-                for (id extra in textExtras) {
-                    if ([extra respondsToSelector:NSSelectorFromString(@"hashtagName")]) {
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Warc-performSelector-leaks"
-                        NSString *tag = [extra performSelector:NSSelectorFromString(@"hashtagName")];
-#pragma clang diagnostic pop
-                        if ([tag isKindOfClass:[NSString class]] && tag.length > 0) {
-                            [sourceText appendString:tag];
-                            [sourceText appendString:@" "];
-                        }
+                for (NSString *keyword in keywordsList) {
+                    NSString *trimmedKeyword = [keyword stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceAndNewlineCharacterSet]];
+                    if (trimmedKeyword.length > 0 && [self.descriptionString containsString:trimmedKeyword]) {
+                        shouldFilterKeywords = YES;
+                        break;
                     }
-                }
-            }
-
-            NSString *normalizedSource = [self dyyy_normalizedFilterText:sourceText];
-            for (NSString *keyword in keywordsList) {
-                NSString *trimmedKeyword = [keyword stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceAndNewlineCharacterSet]];
-                if (trimmedKeyword.length == 0) {
-                    continue;
-                }
-
-                NSString *normalizedKeyword = [self dyyy_normalizedFilterText:trimmedKeyword];
-                if (normalizedKeyword.length > 0 && [normalizedSource containsString:normalizedKeyword]) {
-                    shouldFilterKeywords = YES;
-                    break;
                 }
             }
         }
@@ -5184,25 +5152,6 @@ static NSHashTable *processedParentViews = nil;
     }
     return shouldFilterAds || shouldFilterAllLive || shouldFilterHotSpot || shouldFilterHDR || shouldFilterKeywords || shouldFilterProp ||
            shouldFilterTime || shouldFilterUser;
-}
-
-%new
-- (NSString *)dyyy_normalizedFilterText:(NSString *)text {
-    if (![text isKindOfClass:[NSString class]] || text.length == 0) {
-        return @"";
-    }
-    NSString *normalized = text.lowercaseString;
-    NSCharacterSet *trimSet = [NSCharacterSet whitespaceAndNewlineCharacterSet];
-    normalized = [normalized stringByTrimmingCharactersInSet:trimSet];
-    if (normalized.length == 0) {
-        return @"";
-    }
-
-    NSRegularExpression *regex = [NSRegularExpression regularExpressionWithPattern:@"[\\s#＃\\.,，。!！?？:：;；\\-_/\\\\\\|\\[\\]\\(\\)\\{\\}]+"
-                                                                           options:0
-                                                                             error:nil];
-    normalized = [regex stringByReplacingMatchesInString:normalized options:0 range:NSMakeRange(0, normalized.length) withTemplate:@""];
-    return normalized ?: @"";
 }
 
 - (AWEECommerceLabel *)ecommerceBelowLabel {
@@ -7077,13 +7026,6 @@ static Class tabBarButtonClass = nil;
 - (void)viewDidAppear:(BOOL)animated {
     %orig;
     dyyyCommentViewVisible = YES;
-    [self dyyy_fixMediaScaleIfNeeded];
-    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.08 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
-      [self dyyy_fixMediaScaleIfNeeded];
-    });
-    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.18 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
-      [self dyyy_fixMediaScaleIfNeeded];
-    });
     updateSpeedButtonVisibility();
     updateClearButtonVisibility();
     NSString *transparentValue = [[NSUserDefaults standardUserDefaults] objectForKey:@"DYYYTopBarTransparent"];
@@ -7113,7 +7055,6 @@ static Class tabBarButtonClass = nil;
 
 - (void)viewDidLayoutSubviews {
     %orig;
-    [self dyyy_fixMediaScaleIfNeeded];
 
     if (!DYYYGetBool(@"DYYYEnableCommentBlur"))
         return;
@@ -7163,57 +7104,6 @@ static Class tabBarButtonClass = nil;
                 if (subview.hidden == NO && subview.backgroundColor && CGColorGetAlpha(subview.backgroundColor.CGColor) == 1) {
                     [DYYYUtils applyBlurEffectToView:subview transparency:0.2f blurViewTag:999];
                 }
-            }
-        }
-    }
-}
-
-%new
-- (void)dyyy_fixMediaScaleIfNeeded {
-    UIWindow *activeWindow = [DYYYUtils getActiveWindow];
-    if (!activeWindow) {
-        return;
-    }
-
-    void (^normalizeViewIfCompressed)(UIView *) = ^(UIView *targetView) {
-      if (!targetView) {
-          return;
-      }
-      if (!CGAffineTransformIsIdentity(targetView.transform)) {
-          targetView.transform = CGAffineTransformIdentity;
-      }
-      UIView *targetSuperView = targetView.superview;
-      if (!targetSuperView || targetSuperView.bounds.size.width <= 0 || targetSuperView.bounds.size.height <= 0) {
-          return;
-      }
-      BOOL compressed = targetView.frame.origin.x > 1.0 || targetView.frame.origin.y > 1.0 ||
-                        targetView.frame.size.width < (targetSuperView.bounds.size.width - 1.0) ||
-                        targetView.frame.size.height < (targetSuperView.bounds.size.height - 1.0);
-      if (compressed) {
-          targetView.frame = targetSuperView.bounds;
-      }
-    };
-
-    Class storyClass = %c(AWEStoryContainerCollectionView);
-    NSArray<UIView *> *storyViews = [DYYYUtils findAllSubviewsOfClass:storyClass inContainer:activeWindow];
-    for (UIView *view in storyViews) {
-        normalizeViewIfCompressed(view);
-        UIView *parent = view.superview;
-        for (NSInteger depth = 0; depth < 2 && parent; depth++) {
-            normalizeViewIfCompressed(parent);
-            parent = parent.superview;
-        }
-    }
-
-    Class imageContentClass = objc_getClass("BDMultiContentContainer.ImageContentView");
-    if (imageContentClass) {
-        NSArray<UIView *> *imageViews = [DYYYUtils findAllSubviewsOfClass:imageContentClass inContainer:activeWindow];
-        for (UIView *view in imageViews) {
-            normalizeViewIfCompressed(view);
-            UIView *parent = view.superview;
-            for (NSInteger depth = 0; depth < 2 && parent; depth++) {
-                normalizeViewIfCompressed(parent);
-                parent = parent.superview;
             }
         }
     }
@@ -7330,25 +7220,6 @@ static Class tabBarButtonClass = nil;
 
     BOOL enableBlur = DYYYGetBool(@"DYYYEnableCommentBlur");
     BOOL enableFS = DYYYGetBool(@"DYYYEnableFullScreen");
-
-    if (dyyyCommentViewVisible) {
-        NSString *className = NSStringFromClass([self class]);
-        BOOL isMediaContainerClass = [className containsString:@"StoryContainerCollectionView"] ||
-                                     [className containsString:@"ImageContentView"] ||
-                                     [className containsString:@"MultiContentContainer"] ||
-                                     [className containsString:@"FeedVideoContentView"];
-        if (isMediaContainerClass) {
-            CGRect superFrame = self.superview.bounds;
-            if (superFrame.size.width > 0 && superFrame.size.height > 0) {
-                BOOL compressedByCommentPanel = frame.origin.x > 0.5 || frame.origin.y > 0.5 ||
-                                                frame.size.width < (superFrame.size.width - 1.0) ||
-                                                frame.size.height < (superFrame.size.height - 1.0);
-                if (compressedByCommentPanel) {
-                    return;
-                }
-            }
-        }
-    }
 
     UIViewController *vc = [DYYYUtils firstAvailableViewControllerFromView:self];
     Class DetailVCClass = NSClassFromString(@"AWEMixVideoPanelDetailTableViewController");
@@ -8483,23 +8354,6 @@ static Class TagViewClass = nil;
 %hook AWEStoryContainerCollectionView
 - (void)layoutSubviews {
     %orig;
-
-    // 评论区打开时，部分动图/实况容器会被缩放并上移，这里统一兜底回正
-    if (dyyyCommentViewVisible) {
-        if (!CGAffineTransformIsIdentity(self.transform)) {
-            self.transform = CGAffineTransformIdentity;
-        }
-        UIView *superView = self.superview;
-        if (superView && superView.bounds.size.width > 0 && superView.bounds.size.height > 0) {
-            BOOL compressedByCommentPanel = self.frame.origin.y > 1.0 || self.frame.origin.x > 1.0 ||
-                                            self.frame.size.width < (superView.bounds.size.width - 1.0) ||
-                                            self.frame.size.height < (superView.bounds.size.height - 1.0);
-            if (compressedByCommentPanel) {
-                self.frame = superView.bounds;
-            }
-        }
-    }
-
     if ([self.subviews count] == 2)
         return;
 
@@ -9045,47 +8899,15 @@ static NSString *const kHideRecentUsersKey = @"DYYYHideSidebarRecentUsers";
 %end
 %end
 
-// 评论区毛玻璃开启时的媒体缩放修复
+// View scaling fix when comment blur is enabled
 %group BDMultiContentImageViewGroup
 %hook BDMultiContentContainer_ImageContentView
 
 - (void)setTransform:(CGAffineTransform)transform {
-    // 评论区弹出时会给动图内容做缩放动画，这里强制保持原始比例
-    if (!CGAffineTransformIsIdentity(transform)) {
+    if (DYYYGetBool(@"DYYYEnableCommentBlur")) {
         return;
     }
-    %orig(CGAffineTransformIdentity);
-}
-
-- (void)setFrame:(CGRect)frame {
-    UIView *currentView = (UIView *)self;
-    UIView *superView = currentView.superview;
-    if (superView && superView.bounds.size.width > 0 && superView.bounds.size.height > 0) {
-        BOOL compressedByCommentPanel = frame.origin.y > 1.0 || frame.origin.x > 1.0 ||
-                                        frame.size.width < (superView.bounds.size.width - 1.0) ||
-                                        frame.size.height < (superView.bounds.size.height - 1.0);
-        if (compressedByCommentPanel) {
-            frame = superView.bounds;
-        }
-    }
-    %orig(frame);
-}
-
-- (void)layoutSubviews {
-    %orig;
-    UIView *currentView = (UIView *)self;
-    if (!CGAffineTransformIsIdentity(currentView.transform)) {
-        currentView.transform = CGAffineTransformIdentity;
-    }
-    UIView *superView = currentView.superview;
-    if (superView && superView.bounds.size.width > 0 && superView.bounds.size.height > 0) {
-        BOOL compressedByCommentPanel = currentView.frame.origin.y > 1.0 || currentView.frame.origin.x > 1.0 ||
-                                        currentView.frame.size.width < (superView.bounds.size.width - 1.0) ||
-                                        currentView.frame.size.height < (superView.bounds.size.height - 1.0);
-        if (compressedByCommentPanel) {
-            currentView.frame = superView.bounds;
-        }
-    }
+    %orig(transform);
 }
 
 %end
@@ -9093,22 +8915,10 @@ static NSString *const kHideRecentUsersKey = @"DYYYHideSidebarRecentUsers";
 
 %hook AWEStoryContainerCollectionView
 
-- (void)setTransform:(CGAffineTransform)transform {
-    // 评论区弹出时会触发 setTransform 缩放，这里统一拦截
-    if (!CGAffineTransformIsIdentity(transform)) {
-        return;
-    }
-    %orig(CGAffineTransformIdentity);
-}
-
 - (void)setFrame:(CGRect)frame {
-    UIView *superView = self.superview;
-    if (superView && superView.bounds.size.width > 0 && superView.bounds.size.height > 0) {
-        BOOL compressedByCommentPanel = frame.origin.y > 1.0 || frame.origin.x > 1.0 ||
-                                        frame.size.width < (superView.bounds.size.width - 1.0) ||
-                                        frame.size.height < (superView.bounds.size.height - 1.0);
-        if (compressedByCommentPanel) {
-            frame = superView.bounds;
+    if (DYYYGetBool(@"DYYYEnableCommentBlur")) {
+        if (frame.origin.y != 0) {
+            return;
         }
     }
     %orig(frame);
