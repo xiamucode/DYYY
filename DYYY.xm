@@ -3482,6 +3482,16 @@ static NSArray *DYYYIMMenuItemsByAddingDownloadAction(NSArray *menuItems, id cel
 
 %end
 
+// 隐藏视频页底部“转发日常”按钮
+%hook AFDShareToDailyBottomButton
+- (void)layoutSubviews {
+    %orig;
+    if (DYYYGetBool(@"DYYYHideShareToDailyBottomButton")) {
+        self.hidden = YES;
+    }
+}
+%end
+
 
 %hook AWELeftSideBarEntranceView
 

@@ -499,6 +499,9 @@ typedef NS_ENUM(NSUInteger, DYEdgeMode) {
 @interface AFDRecommendToFriendEntranceLabel : UILabel
 @end
 
+@interface AFDShareToDailyBottomButton : UIView
+@end
+
 @interface AWEStoryContainerCollectionView : UIView
 @end
 

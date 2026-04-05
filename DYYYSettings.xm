@@ -146,6 +146,7 @@ static NSArray<NSDictionary<NSString *, NSString *> *> *DYYYSearchManifest(void)
         @{@"category": @"隐藏设置", @"section": @"视频播放界面", @"title": @"隐藏音乐按钮"},
         @{@"category": @"隐藏设置", @"section": @"视频播放界面", @"title": @"隐藏遮罩效果"},
         @{@"category": @"隐藏设置", @"section": @"视频播放界面", @"title": @"隐藏返回按钮"},
+        @{@"category": @"隐藏设置", @"section": @"视频播放界面", @"title": @"隐藏转发日常"},
         @{@"category": @"隐藏设置", @"section": @"侧边栏", @"title": @"隐藏常用小程序"},
         @{@"category": @"隐藏设置", @"section": @"侧边栏", @"title": @"隐藏常访问的人"},
         @{@"category": @"隐藏设置", @"section": @"侧边栏", @"title": @"隐藏侧栏红点"},
@@ -435,6 +436,7 @@ static NSDictionary<NSString *, NSDictionary *> *DYYYSearchInteractionMetadata(v
             @"隐藏设置|视频播放界面|隐藏音乐按钮": @{@"identifier": @"DYYYHideMusicButton", @"title": @"隐藏音乐按钮", @"cellType": @6, @"imageName": @"ic_eyeslash_outlined_16"},
             @"隐藏设置|视频播放界面|隐藏遮罩效果": @{@"identifier": @"DYYYHideGradient", @"title": @"隐藏遮罩效果", @"cellType": @37, @"subTitle": @"移除视频文案或图片滑条可能出现的黑色背景遮罩效果，但可能对部分视频的文案可读性产生一定影响。", @"imageName": @"ic_eyeslash_outlined_16"},
             @"隐藏设置|视频播放界面|隐藏返回按钮": @{@"identifier": @"DYYYHideBack", @"title": @"隐藏返回按钮", @"cellType": @37, @"subTitle": @"主页视频左上角的返回按钮", @"imageName": @"ic_eyeslash_outlined_16"},
+            @"隐藏设置|视频播放界面|隐藏转发日常": @{@"identifier": @"DYYYHideShareToDailyBottomButton", @"title": @"隐藏转发日常", @"cellType": @6, @"imageName": @"ic_eyeslash_outlined_16"},
             @"隐藏设置|侧边栏|隐藏常用小程序": @{@"identifier": @"DYYYHideSidebarRecentApps", @"title": @"隐藏常用小程序", @"cellType": @6, @"imageName": @"ic_eyeslash_outlined_16"},
             @"隐藏设置|侧边栏|隐藏常访问的人": @{@"identifier": @"DYYYHideSidebarRecentUsers", @"title": @"隐藏常访问的人", @"cellType": @6, @"imageName": @"ic_eyeslash_outlined_16"},
             @"隐藏设置|侧边栏|隐藏侧栏红点": @{@"identifier": @"DYYYHideSidebarDot", @"title": @"隐藏侧栏红点", @"cellType": @6, @"imageName": @"ic_eyeslash_outlined_16"},
@@ -2083,6 +2085,11 @@ void showDYYYSettingsVC(UIViewController *rootVC, BOOL hasAgreed) {
             @"subTitle" : @"主页视频左上角的返回按钮",
             @"detail" : @"",
             @"cellType" : @37,
+            @"imageName" : @"ic_eyeslash_outlined_16"},
+          @{@"identifier" : @"DYYYHideShareToDailyBottomButton",
+            @"title" : @"隐藏转发日常",
+            @"detail" : @"",
+            @"cellType" : @6,
             @"imageName" : @"ic_eyeslash_outlined_16"}
       ];
 
