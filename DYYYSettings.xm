@@ -770,7 +770,6 @@ static void DYYYRemoveRemoteConfigObserver(void) {
     }
 
     NSString *targetSection = objc_getAssociatedObject(self, &kDYYYSearchTargetSectionKey) ?: @"";
-    NSString *targetPath = objc_getAssociatedObject(self, &kDYYYSearchTargetPathKey) ?: targetTitle;
     AWESettingsViewModel *viewModel = (AWESettingsViewModel *)[self viewModel];
     if (![viewModel respondsToSelector:@selector(sectionDataArray)]) {
         return;
@@ -861,7 +860,6 @@ static void DYYYRemoveRemoteConfigObserver(void) {
         [cell.contentView addSubview:marker];
         [cell.contentView bringSubviewToFront:marker];
 
-        [DYYYUtils showToast:[NSString stringWithFormat:@"已定位：%@", targetPath]];
         dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(1.6 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
           [UIView animateWithDuration:0.2 animations:^{
             marker.alpha = 0.0;
