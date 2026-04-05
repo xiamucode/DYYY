@@ -682,9 +682,11 @@ static AWESettingItemModel *DYYYSearchResultItemFromEntry(AWESettingBaseViewCont
         AWESettingItemModel *directItem = [DYYYSettingsHelper createSettingItem:metadata cellTapHandlers:[NSMutableDictionary dictionary]];
         if (directItem && canJumpToParent) {
             directItem.isEnable = YES;
-            directItem.cellType = 26;
-            directItem.detail = @"前往";
-            directItem.subTitle = directItem.subTitle.length > 0 ? directItem.subTitle : @"点击前往对应设置页";
+            if (directItem.cellType != 6 && directItem.cellType != 37) {
+                directItem.cellType = 26;
+                directItem.detail = @"前往";
+            }
+            directItem.subTitle = directItem.subTitle.length > 0 ? directItem.subTitle : @"点击左侧区域可前往对应设置页";
             __weak AWESettingBaseViewController *weakController = controller;
             __weak AWESettingItemModel *weakParentItem = parentItem;
             NSDictionary<NSString *, NSString *> *entryCopy = [entry copy];
