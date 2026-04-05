@@ -3482,6 +3482,16 @@ static NSArray *DYYYIMMenuItemsByAddingDownloadAction(NSArray *menuItems, id cel
 
 %end
 
+// 隐藏视频页底部“转发日常”按钮
+%hook AFDShareToDailyBottomButton
+- (void)layoutSubviews {
+    %orig;
+    if (DYYYGetBool(@"DYYYHideShareToDailyBottomButton")) {
+        self.hidden = YES;
+    }
+}
+%end
+
 
 %hook AWELeftSideBarEntranceView
 
@@ -7232,8 +7242,14 @@ static Class tabBarButtonClass = nil;
                      (PlayVCClass2 && [vc isKindOfClass:PlayVCClass2]) ||
                      (PlayVCClass3 && [vc isKindOfClass:PlayVCClass3]));
 
-    if (isPlayVC && enableBlur) {
-        if (frame.origin.x != 0) {
+    if ((isPlayVC || isDetailVC) && enableBlur) {
+        CGRect superFrame = self.superview.bounds;
+        BOOL compressedByComment = frame.origin.x > 0.5 || frame.origin.y > 0.5;
+        if (!compressedByComment && superFrame.size.width > 0 && superFrame.size.height > 0) {
+            compressedByComment = frame.size.width < (superFrame.size.width - 1.0) ||
+                                  frame.size.height < (superFrame.size.height - 1.0);
+        }
+        if (compressedByComment) {
             return;
         }
     }
