@@ -807,7 +807,7 @@ static void DYYYRemoveRemoteConfigObserver(void) {
 
     dispatch_async(dispatch_get_main_queue(), ^{
       [self.tableView layoutIfNeeded];
-      [self.tableView scrollToRowAtIndexPath:targetIndexPath atScrollPosition:UITableViewScrollPositionMiddle animated:YES];
+      [self.tableView scrollToRowAtIndexPath:targetIndexPath atScrollPosition:UITableViewScrollPositionMiddle animated:NO];
       dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(300 * NSEC_PER_MSEC)), dispatch_get_main_queue(), ^{
         UITableViewCell *cell = [self.tableView cellForRowAtIndexPath:targetIndexPath];
         if (!cell) {
@@ -817,22 +817,21 @@ static void DYYYRemoveRemoteConfigObserver(void) {
         UIView *marker = [[UIView alloc] initWithFrame:cell.contentView.bounds];
         marker.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
         marker.userInteractionEnabled = NO;
-        marker.backgroundColor = [DYYYUtils isDarkMode] ? [UIColor colorWithWhite:0.24 alpha:0.95] : [UIColor colorWithWhite:0.82 alpha:0.95];
-        marker.alpha = 0.0;
-        [cell.contentView insertSubview:marker atIndex:0];
+        marker.backgroundColor = [DYYYUtils isDarkMode] ? [UIColor colorWithWhite:0.24 alpha:0.32] : [UIColor colorWithWhite:0.18 alpha:0.14];
+        marker.alpha = 1.0;
+        marker.layer.cornerRadius = cell.contentView.layer.cornerRadius > 0 ? cell.contentView.layer.cornerRadius : 14.0;
+        marker.layer.masksToBounds = YES;
+        [cell.contentView addSubview:marker];
+        [cell.contentView bringSubviewToFront:marker];
 
-        [UIView animateWithDuration:0.2 animations:^{
-          marker.alpha = 1.0;
-        } completion:^(BOOL finished) {
-          [DYYYUtils showToast:[NSString stringWithFormat:@"已定位：%@", targetPath]];
-          dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(2.0 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
-            [UIView animateWithDuration:0.25 animations:^{
-              marker.alpha = 0.0;
-            } completion:^(BOOL finishedInner) {
-              [marker removeFromSuperview];
-            }];
-          });
-        }];
+        [DYYYUtils showToast:[NSString stringWithFormat:@"已定位：%@", targetPath]];
+        dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(1.6 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+          [UIView animateWithDuration:0.2 animations:^{
+            marker.alpha = 0.0;
+          } completion:^(BOOL finishedInner) {
+            [marker removeFromSuperview];
+          }];
+        });
       });
     });
 }
