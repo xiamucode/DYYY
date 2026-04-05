@@ -798,6 +798,24 @@ static void DYYYRemoveRemoteConfigObserver(void) {
     }
 
     if (!targetIndexPath) {
+        for (NSInteger sectionIndex = 0; sectionIndex < sections.count; sectionIndex++) {
+            AWESettingSectionModel *sectionModel = sections[sectionIndex];
+            NSArray *items = [sectionModel.itemArray isKindOfClass:[NSArray class]] ? sectionModel.itemArray : @[];
+            for (NSInteger row = 0; row < items.count; row++) {
+                AWESettingItemModel *item = items[row];
+                if (![item.title isEqualToString:targetTitle]) {
+                    continue;
+                }
+                targetIndexPath = [NSIndexPath indexPathForRow:row inSection:sectionIndex];
+                break;
+            }
+            if (targetIndexPath) {
+                break;
+            }
+        }
+    }
+
+    if (!targetIndexPath) {
         return;
     }
 
@@ -814,12 +832,31 @@ static void DYYYRemoveRemoteConfigObserver(void) {
             return;
         }
 
-        UIView *marker = [[UIView alloc] initWithFrame:cell.contentView.bounds];
+        CGRect markerFrame = cell.contentView.bounds;
+        CGFloat markerCornerRadius = cell.contentView.layer.cornerRadius;
+        CGFloat maxCandidateArea = 0;
+        for (UIView *subview in cell.contentView.subviews) {
+            if (subview.hidden || subview.alpha <= 0.01 || subview.bounds.size.width <= 0 || subview.bounds.size.height <= 0) {
+                continue;
+            }
+            CGRect frame = subview.frame;
+            CGFloat area = frame.size.width * frame.size.height;
+            BOOL widthLooksLikeMainBody = frame.size.width >= CGRectGetWidth(cell.contentView.bounds) * 0.65;
+            BOOL isInsetBody = CGRectGetMinX(frame) >= 6.0 && CGRectGetMaxX(frame) <= CGRectGetWidth(cell.contentView.bounds) - 6.0;
+            if (!widthLooksLikeMainBody || !isInsetBody || area <= maxCandidateArea) {
+                continue;
+            }
+            maxCandidateArea = area;
+            markerFrame = frame;
+            markerCornerRadius = subview.layer.cornerRadius;
+        }
+
+        UIView *marker = [[UIView alloc] initWithFrame:markerFrame];
         marker.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
         marker.userInteractionEnabled = NO;
         marker.backgroundColor = [DYYYUtils isDarkMode] ? [UIColor colorWithWhite:0.24 alpha:0.32] : [UIColor colorWithWhite:0.18 alpha:0.14];
         marker.alpha = 1.0;
-        marker.layer.cornerRadius = cell.contentView.layer.cornerRadius > 0 ? cell.contentView.layer.cornerRadius : 14.0;
+        marker.layer.cornerRadius = markerCornerRadius > 0 ? markerCornerRadius : 14.0;
         marker.layer.masksToBounds = YES;
         [cell.contentView addSubview:marker];
         [cell.contentView bringSubviewToFront:marker];
