@@ -680,15 +680,11 @@ static AWESettingItemModel *DYYYSearchResultItemFromEntry(AWESettingBaseViewCont
     NSDictionary *metadata = DYYYSearchInteractionMetadata()[entryKey];
     if ([metadata isKindOfClass:[NSDictionary class]]) {
         AWESettingItemModel *directItem = [DYYYSettingsHelper createSettingItem:metadata cellTapHandlers:[NSMutableDictionary dictionary]];
-        if (directItem && directItem.isEnable) {
-            return directItem;
-        }
-
         if (directItem && canJumpToParent) {
             directItem.isEnable = YES;
             directItem.cellType = 26;
             directItem.detail = @"前往";
-            directItem.subTitle = @"当前项受依赖限制未启用，点击前往对应设置页";
+            directItem.subTitle = directItem.subTitle.length > 0 ? directItem.subTitle : @"点击前往对应设置页";
             __weak AWESettingBaseViewController *weakController = controller;
             __weak AWESettingItemModel *weakParentItem = parentItem;
             NSDictionary<NSString *, NSString *> *entryCopy = [entry copy];
@@ -697,6 +693,10 @@ static AWESettingItemModel *DYYYSearchResultItemFromEntry(AWESettingBaseViewCont
               __strong AWESettingItemModel *strongParentItem = weakParentItem;
               DYYYPerformSearchJump(strongController, strongParentItem, entryCopy);
             };
+            return directItem;
+        }
+
+        if (directItem && directItem.isEnable) {
             return directItem;
         }
     }
@@ -713,9 +713,10 @@ static AWESettingItemModel *DYYYSearchResultItemFromEntry(AWESettingBaseViewCont
     item.type = 0;
     item.svgIconImageName = parentItem.svgIconImageName;
     item.iconImageName = parentItem.iconImageName;
-    item.cellType = parentItem.cellType ?: 26;
+    item.cellType = 26;
     item.colorStyle = parentItem.colorStyle;
     item.isEnable = YES;
+    item.detail = @"前往";
     __weak AWESettingBaseViewController *weakController = controller;
     __weak AWESettingItemModel *weakParentItem = parentItem;
     NSDictionary<NSString *, NSString *> *entryCopy = [entry copy];
