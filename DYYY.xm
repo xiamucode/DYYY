@@ -4292,10 +4292,24 @@ static NSHashTable *processedParentViews = nil;
 - (void)layoutSubviews {
     %orig;
 
-    BOOL shouldHideDiscover = DYYYGetBool(@"DYYYHideDiscover");
+    if (DYYYGetBool(@"DYYYHideDiscover")) {
+        UIView *firstSubview = self.subviews.firstObject;
+        if ([firstSubview isKindOfClass:[UIImageView class]]) {
+            ((UIImageView *)firstSubview).image = nil;
+        }
+    }
+}
+
+%end
+
+// 隐藏 iPad 右上搜索，但可点击
+%hook AWEPadSearchEntranceView
+- (void)layoutSubviews {
+    %orig;
+
+    BOOL shouldHideDiscover = DYYYGetBool(@"DYYYHideIPadDiscover");
     self.hidden = NO;
     self.userInteractionEnabled = YES;
-
     for (UIView *subview in self.subviews) {
         subview.alpha = shouldHideDiscover ? 0.02 : 1.0;
     }

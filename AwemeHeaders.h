@@ -773,6 +773,9 @@ typedef NS_ENUM(NSUInteger, DYEdgeMode) {
 - (void)configImage:(UIImageView *)imageView Label:(UILabel *)label position:(NSInteger)pos;
 @end
 
+@interface AWEPadSearchEntranceView : UIView
+@end
+
 @interface AWEIMCellLiveStatusContainerView : UIView
 - (void)p_initUI;
 @end
