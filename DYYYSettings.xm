@@ -146,6 +146,7 @@ static NSArray<NSDictionary<NSString *, NSString *> *> *DYYYSearchManifest(void)
         @{@"category": @"隐藏设置", @"section": @"视频播放界面", @"title": @"隐藏音乐按钮"},
         @{@"category": @"隐藏设置", @"section": @"视频播放界面", @"title": @"隐藏遮罩效果"},
         @{@"category": @"隐藏设置", @"section": @"视频播放界面", @"title": @"隐藏返回按钮"},
+        @{@"category": @"隐藏设置", @"section": @"视频播放界面", @"title": @"隐藏转发日常"},
         @{@"category": @"隐藏设置", @"section": @"侧边栏", @"title": @"隐藏常用小程序"},
         @{@"category": @"隐藏设置", @"section": @"侧边栏", @"title": @"隐藏常访问的人"},
         @{@"category": @"隐藏设置", @"section": @"侧边栏", @"title": @"隐藏侧栏红点"},
@@ -435,6 +436,7 @@ static NSDictionary<NSString *, NSDictionary *> *DYYYSearchInteractionMetadata(v
             @"隐藏设置|视频播放界面|隐藏音乐按钮": @{@"identifier": @"DYYYHideMusicButton", @"title": @"隐藏音乐按钮", @"cellType": @6, @"imageName": @"ic_eyeslash_outlined_16"},
             @"隐藏设置|视频播放界面|隐藏遮罩效果": @{@"identifier": @"DYYYHideGradient", @"title": @"隐藏遮罩效果", @"cellType": @37, @"subTitle": @"移除视频文案或图片滑条可能出现的黑色背景遮罩效果，但可能对部分视频的文案可读性产生一定影响。", @"imageName": @"ic_eyeslash_outlined_16"},
             @"隐藏设置|视频播放界面|隐藏返回按钮": @{@"identifier": @"DYYYHideBack", @"title": @"隐藏返回按钮", @"cellType": @37, @"subTitle": @"主页视频左上角的返回按钮", @"imageName": @"ic_eyeslash_outlined_16"},
+            @"隐藏设置|视频播放界面|隐藏转发日常": @{@"identifier": @"DYYYHideShareToDailyBottomButton", @"title": @"隐藏转发日常", @"cellType": @6, @"imageName": @"ic_eyeslash_outlined_16"},
             @"隐藏设置|侧边栏|隐藏常用小程序": @{@"identifier": @"DYYYHideSidebarRecentApps", @"title": @"隐藏常用小程序", @"cellType": @6, @"imageName": @"ic_eyeslash_outlined_16"},
             @"隐藏设置|侧边栏|隐藏常访问的人": @{@"identifier": @"DYYYHideSidebarRecentUsers", @"title": @"隐藏常访问的人", @"cellType": @6, @"imageName": @"ic_eyeslash_outlined_16"},
             @"隐藏设置|侧边栏|隐藏侧栏红点": @{@"identifier": @"DYYYHideSidebarDot", @"title": @"隐藏侧栏红点", @"cellType": @6, @"imageName": @"ic_eyeslash_outlined_16"},
@@ -678,15 +680,13 @@ static AWESettingItemModel *DYYYSearchResultItemFromEntry(AWESettingBaseViewCont
     NSDictionary *metadata = DYYYSearchInteractionMetadata()[entryKey];
     if ([metadata isKindOfClass:[NSDictionary class]]) {
         AWESettingItemModel *directItem = [DYYYSettingsHelper createSettingItem:metadata cellTapHandlers:[NSMutableDictionary dictionary]];
-        if (directItem && directItem.isEnable) {
-            return directItem;
-        }
-
         if (directItem && canJumpToParent) {
             directItem.isEnable = YES;
-            directItem.cellType = 26;
-            directItem.detail = @"前往";
-            directItem.subTitle = @"当前项受依赖限制未启用，点击前往对应设置页";
+            if (directItem.cellType != 6 && directItem.cellType != 37) {
+                directItem.cellType = 26;
+                directItem.detail = @"前往";
+            }
+            directItem.subTitle = directItem.subTitle.length > 0 ? directItem.subTitle : @"点击左侧区域可前往对应设置页";
             __weak AWESettingBaseViewController *weakController = controller;
             __weak AWESettingItemModel *weakParentItem = parentItem;
             NSDictionary<NSString *, NSString *> *entryCopy = [entry copy];
@@ -695,6 +695,10 @@ static AWESettingItemModel *DYYYSearchResultItemFromEntry(AWESettingBaseViewCont
               __strong AWESettingItemModel *strongParentItem = weakParentItem;
               DYYYPerformSearchJump(strongController, strongParentItem, entryCopy);
             };
+            return directItem;
+        }
+
+        if (directItem && directItem.isEnable) {
             return directItem;
         }
     }
@@ -711,9 +715,10 @@ static AWESettingItemModel *DYYYSearchResultItemFromEntry(AWESettingBaseViewCont
     item.type = 0;
     item.svgIconImageName = parentItem.svgIconImageName;
     item.iconImageName = parentItem.iconImageName;
-    item.cellType = parentItem.cellType ?: 26;
+    item.cellType = 26;
     item.colorStyle = parentItem.colorStyle;
     item.isEnable = YES;
+    item.detail = @"前往";
     __weak AWESettingBaseViewController *weakController = controller;
     __weak AWESettingItemModel *weakParentItem = parentItem;
     NSDictionary<NSString *, NSString *> *entryCopy = [entry copy];
@@ -765,7 +770,6 @@ static void DYYYRemoveRemoteConfigObserver(void) {
     }
 
     NSString *targetSection = objc_getAssociatedObject(self, &kDYYYSearchTargetSectionKey) ?: @"";
-    NSString *targetPath = objc_getAssociatedObject(self, &kDYYYSearchTargetPathKey) ?: targetTitle;
     AWESettingsViewModel *viewModel = (AWESettingsViewModel *)[self viewModel];
     if (![viewModel respondsToSelector:@selector(sectionDataArray)]) {
         return;
@@ -793,6 +797,24 @@ static void DYYYRemoveRemoteConfigObserver(void) {
     }
 
     if (!targetIndexPath) {
+        for (NSInteger sectionIndex = 0; sectionIndex < sections.count; sectionIndex++) {
+            AWESettingSectionModel *sectionModel = sections[sectionIndex];
+            NSArray *items = [sectionModel.itemArray isKindOfClass:[NSArray class]] ? sectionModel.itemArray : @[];
+            for (NSInteger row = 0; row < items.count; row++) {
+                AWESettingItemModel *item = items[row];
+                if (![item.title isEqualToString:targetTitle]) {
+                    continue;
+                }
+                targetIndexPath = [NSIndexPath indexPathForRow:row inSection:sectionIndex];
+                break;
+            }
+            if (targetIndexPath) {
+                break;
+            }
+        }
+    }
+
+    if (!targetIndexPath) {
         return;
     }
 
@@ -802,32 +824,49 @@ static void DYYYRemoveRemoteConfigObserver(void) {
 
     dispatch_async(dispatch_get_main_queue(), ^{
       [self.tableView layoutIfNeeded];
-      [self.tableView scrollToRowAtIndexPath:targetIndexPath atScrollPosition:UITableViewScrollPositionMiddle animated:YES];
+      [self.tableView scrollToRowAtIndexPath:targetIndexPath atScrollPosition:UITableViewScrollPositionMiddle animated:NO];
       dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(300 * NSEC_PER_MSEC)), dispatch_get_main_queue(), ^{
         UITableViewCell *cell = [self.tableView cellForRowAtIndexPath:targetIndexPath];
         if (!cell) {
             return;
         }
 
-        UIView *marker = [[UIView alloc] initWithFrame:cell.contentView.bounds];
+        CGRect markerFrame = cell.contentView.bounds;
+        CGFloat markerCornerRadius = cell.contentView.layer.cornerRadius;
+        CGFloat maxCandidateArea = 0;
+        for (UIView *subview in cell.contentView.subviews) {
+            if (subview.hidden || subview.alpha <= 0.01 || subview.bounds.size.width <= 0 || subview.bounds.size.height <= 0) {
+                continue;
+            }
+            CGRect frame = subview.frame;
+            CGFloat area = frame.size.width * frame.size.height;
+            BOOL widthLooksLikeMainBody = frame.size.width >= CGRectGetWidth(cell.contentView.bounds) * 0.65;
+            BOOL isInsetBody = CGRectGetMinX(frame) >= 6.0 && CGRectGetMaxX(frame) <= CGRectGetWidth(cell.contentView.bounds) - 6.0;
+            if (!widthLooksLikeMainBody || !isInsetBody || area <= maxCandidateArea) {
+                continue;
+            }
+            maxCandidateArea = area;
+            markerFrame = frame;
+            markerCornerRadius = subview.layer.cornerRadius;
+        }
+
+        UIView *marker = [[UIView alloc] initWithFrame:markerFrame];
         marker.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
         marker.userInteractionEnabled = NO;
-        marker.backgroundColor = [DYYYUtils isDarkMode] ? [UIColor colorWithWhite:0.24 alpha:0.95] : [UIColor colorWithWhite:0.82 alpha:0.95];
-        marker.alpha = 0.0;
-        [cell.contentView insertSubview:marker atIndex:0];
+        marker.backgroundColor = [DYYYUtils isDarkMode] ? [UIColor colorWithWhite:0.24 alpha:0.32] : [UIColor colorWithWhite:0.18 alpha:0.14];
+        marker.alpha = 1.0;
+        marker.layer.cornerRadius = markerCornerRadius > 0 ? markerCornerRadius : 14.0;
+        marker.layer.masksToBounds = YES;
+        [cell.contentView addSubview:marker];
+        [cell.contentView bringSubviewToFront:marker];
 
-        [UIView animateWithDuration:0.2 animations:^{
-          marker.alpha = 1.0;
-        } completion:^(BOOL finished) {
-          [DYYYUtils showToast:[NSString stringWithFormat:@"已定位：%@", targetPath]];
-          dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(2.0 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
-            [UIView animateWithDuration:0.25 animations:^{
-              marker.alpha = 0.0;
-            } completion:^(BOOL finishedInner) {
-              [marker removeFromSuperview];
-            }];
-          });
-        }];
+        dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(1.6 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+          [UIView animateWithDuration:0.2 animations:^{
+            marker.alpha = 0.0;
+          } completion:^(BOOL finishedInner) {
+            [marker removeFromSuperview];
+          }];
+        });
       });
     });
 }
@@ -2083,6 +2122,11 @@ void showDYYYSettingsVC(UIViewController *rootVC, BOOL hasAgreed) {
             @"subTitle" : @"主页视频左上角的返回按钮",
             @"detail" : @"",
             @"cellType" : @37,
+            @"imageName" : @"ic_eyeslash_outlined_16"},
+          @{@"identifier" : @"DYYYHideShareToDailyBottomButton",
+            @"title" : @"隐藏转发日常",
+            @"detail" : @"",
+            @"cellType" : @6,
             @"imageName" : @"ic_eyeslash_outlined_16"}
       ];
 
