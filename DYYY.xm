@@ -4097,6 +4097,27 @@ static NSHashTable *processedParentViews = nil;
         }
     }
 
+    if (DYYYGetBool(@"DYYYHideMusicTopText")) {
+        UIViewController *viewController = [DYYYUtils firstAvailableViewControllerFromView:self];
+        if ([viewController isKindOfClass:%c(AWEPlayInteractionViewController)]) {
+            NSString *text = self.text;
+            BOOL matchText = [text isKindOfClass:[NSString class]] && ([text containsString:@"同款"] || [text containsString:@"听"]);
+            CGRect frame = self.frame;
+            BOOL matchSize = frame.size.width >= 33.0 && frame.size.width <= 40.0 && frame.size.height >= 12.0 && frame.size.height <= 16.0;
+            BOOL matchPosition = frame.origin.x >= 2.0 && frame.origin.x <= 8.0 && frame.origin.y >= 24.0 && frame.origin.y <= 36.0;
+
+            NSString *parentAccessibilityLabel = self.superview.accessibilityLabel;
+            BOOL matchParentText = [parentAccessibilityLabel isKindOfClass:[NSString class]] && ([parentAccessibilityLabel containsString:@"同款"] || [parentAccessibilityLabel containsString:@"听"]);
+            BOOL matchParentSize = self.superview.frame.size.width >= 40.0 && self.superview.frame.size.width <= 48.0 && self.superview.frame.size.height >= 40.0 && self.superview.frame.size.height <= 48.0;
+
+            if ((matchText && matchSize && matchPosition) || (matchParentText && matchParentSize)) {
+                self.hidden = YES;
+                self.alpha = 0.0;
+                self.userInteractionEnabled = NO;
+            }
+        }
+    }
+
 }
 %end
 
