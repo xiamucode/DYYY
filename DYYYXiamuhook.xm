@@ -102,11 +102,13 @@
         return;
     }
 
+    NSString *className = NSStringFromClass([self class]);
     NSString *superviewClassName = NSStringFromClass([self.superview class]);
-    BOOL isMusicCoverContainer = [superviewClassName containsString:@"MusicCoverButton"];
+    BOOL isMusicContainerClass = [className containsString:@"PlayInteractionStyleOneMusic"] || [className containsString:@"PlayInteractionSingleSongMusicStyle"] || [className containsString:@"MusicCoverButton"];
+    BOOL isMusicContainerSuperview = [superviewClassName containsString:@"PlayInteractionStyleOneMusic"] || [superviewClassName containsString:@"PlayInteractionSingleSongMusicStyle"] || [superviewClassName containsString:@"MusicCoverButton"];
     BOOL matchSelfFrame = self.frame.origin.x == 0.0 && self.frame.origin.y == 0.0 && self.frame.size.width >= 40.0 && self.frame.size.width <= 48.0 && self.frame.size.height >= 40.0 && self.frame.size.height <= 48.0;
     BOOL matchState = !self.userInteractionEnabled && self.clipsToBounds;
-    if (!(isMusicCoverContainer && matchSelfFrame && matchState)) {
+    if (!((isMusicContainerClass || isMusicContainerSuperview) && matchSelfFrame && matchState)) {
         return;
     }
 
