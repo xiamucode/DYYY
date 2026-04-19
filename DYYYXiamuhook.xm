@@ -89,6 +89,50 @@
 
     %orig;
 }
+
+- (void)layoutSubviews {
+    %orig;
+
+    if (!DYYYGetBool(@"DYYYHideMusicTopText")) {
+        return;
+    }
+
+    UIViewController *viewController = [DYYYUtils firstAvailableViewControllerFromView:self];
+    if (![viewController isKindOfClass:%c(AWEPlayInteractionViewController)]) {
+        return;
+    }
+
+    NSString *superviewClassName = NSStringFromClass([self.superview class]);
+    BOOL isMusicCoverContainer = [superviewClassName containsString:@"MusicCoverButton"];
+    BOOL matchSelfFrame = self.frame.origin.x == 0.0 && self.frame.origin.y == 0.0 && self.frame.size.width >= 40.0 && self.frame.size.width <= 48.0 && self.frame.size.height >= 40.0 && self.frame.size.height <= 48.0;
+    BOOL matchState = !self.userInteractionEnabled && self.clipsToBounds;
+    if (!(isMusicCoverContainer && matchSelfFrame && matchState)) {
+        return;
+    }
+
+    BOOL hasShadowStripImageView = NO;
+    BOOL hasMusicTextLabel = NO;
+    for (UIView *subview in self.subviews) {
+        if ([subview isKindOfClass:[UIImageView class]]) {
+            CGRect frame = subview.frame;
+            BOOL matchFrame = frame.origin.x >= -1.0 && frame.origin.x <= 2.0 && frame.origin.y >= 24.0 && frame.origin.y <= 36.0 && frame.size.width >= 40.0 && frame.size.width <= 48.0 && frame.size.height >= 12.0 && frame.size.height <= 16.0;
+            if (matchFrame) {
+                hasShadowStripImageView = YES;
+            }
+        } else if ([subview isKindOfClass:[UILabel class]]) {
+            UILabel *label = (UILabel *)subview;
+            NSString *text = label.text;
+            if ([text isKindOfClass:[NSString class]] && ([text containsString:@"同款"] || [text containsString:@"听"])) {
+                hasMusicTextLabel = YES;
+            }
+        }
+    }
+
+    if (hasShadowStripImageView || hasMusicTextLabel) {
+        self.hidden = YES;
+        self.alpha = 0.0;
+    }
+}
 %end
 
 %hook AWESearchAIGCSummaryEntryView
