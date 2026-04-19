@@ -116,20 +116,3 @@
 }
 %end
 
-// 隐藏评论区搜索入口图标
-%hook UIImageView
-- (void)layoutSubviews {
-    %orig;
-    if (DYYYGetBool(@"DYYYHideCommentDiscover")) {
-        if (!self.accessibilityLabel) {
-            UIView *parentView = self.superview;
-
-            if (parentView && [parentView class] == [UIView class] && [parentView.accessibilityLabel isEqualToString:@"搜索"]) {
-                self.hidden = YES;
-            } else if (parentView && [NSStringFromClass([parentView class]) isEqualToString:@"AWESearchEntryHalfScreenElement"] && [parentView.accessibilityLabel isEqualToString:@"搜索"]) {
-                self.hidden = YES;
-            }
-        }
-    }
-}
-%end
