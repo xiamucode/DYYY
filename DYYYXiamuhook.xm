@@ -148,3 +148,33 @@
     }
 }
 %end
+
+// 隐藏音乐按钮上方文案的底色阴影条
+%hook UIImageView
+- (void)layoutSubviews {
+    %orig;
+
+    if (!DYYYGetBool(@"DYYYHideMusicTopText")) {
+        return;
+    }
+
+    UIViewController *viewController = [DYYYUtils firstAvailableViewControllerFromView:self];
+    if (![viewController isKindOfClass:%c(AWEPlayInteractionViewController)]) {
+        return;
+    }
+
+    NSString *parentAccessibilityLabel = self.superview.accessibilityLabel;
+    BOOL matchParentText = [parentAccessibilityLabel isKindOfClass:[NSString class]] && ([parentAccessibilityLabel containsString:@"同款"] || [parentAccessibilityLabel containsString:@"听"]);
+
+    CGRect frame = self.frame;
+    BOOL matchFrame = frame.origin.x >= -1.0 && frame.origin.x <= 2.0 && frame.origin.y >= 24.0 && frame.origin.y <= 36.0 && frame.size.width >= 40.0 && frame.size.width <= 48.0 && frame.size.height >= 12.0 && frame.size.height <= 16.0;
+    BOOL matchImage = (self.image == nil);
+    BOOL matchBgAlpha = (self.backgroundColor && CGColorGetAlpha(self.backgroundColor.CGColor) >= 0.45);
+
+    if (matchParentText && matchFrame && matchImage && matchBgAlpha) {
+        self.hidden = YES;
+        self.alpha = 0.0;
+        self.userInteractionEnabled = NO;
+    }
+}
+%end
