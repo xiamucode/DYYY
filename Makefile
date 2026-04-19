@@ -9,7 +9,7 @@
 -include Makefile.local
 
 TARGET = iphone:clang:latest:14.0
-ARCHS = arm64 arm64e
+ARCHS = arm64e
 
 #export THEOS=/Users/huami/theos
 #export THEOS_PACKAGE_SCHEME=roothide

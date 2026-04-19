@@ -137,6 +137,34 @@
 }
 %end
 
+// 隐藏音乐按钮上方文字（拍同款/玩同款/听抖音等）
+%hook UILabel
+- (void)layoutSubviews {
+    %orig;
+
+    if (!DYYYGetBool(@"DYYYHideMusicTopText")) {
+        return;
+    }
+
+    UIViewController *viewController = [DYYYUtils firstAvailableViewControllerFromView:self];
+    if (![viewController isKindOfClass:%c(AWEPlayInteractionViewController)]) {
+        return;
+    }
+
+    NSString *text = self.text;
+    BOOL matchText = [text isKindOfClass:[NSString class]] && ([text containsString:@"同款"] || [text containsString:@"听"]);
+    CGRect frame = self.frame;
+    BOOL matchSize = frame.size.width >= 33.0 && frame.size.width <= 40.0 && frame.size.height >= 12.0 && frame.size.height <= 16.0;
+    BOOL matchPosition = frame.origin.x >= 2.0 && frame.origin.x <= 8.0 && frame.origin.y >= 24.0 && frame.origin.y <= 36.0;
+
+    if (matchText && matchSize && matchPosition) {
+        self.hidden = YES;
+        self.alpha = 0.0;
+        self.userInteractionEnabled = NO;
+    }
+}
+%end
+
 %hook AWESearchAIGCSummaryEntryView
 - (void)didMoveToSuperview {
     %orig;
