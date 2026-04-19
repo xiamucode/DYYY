@@ -10,5 +10,8 @@
 @interface AWEPlayInteractionStyleOneMusicView : UIView
 @end
 
+@interface AWEPlayInteractionSingleSongMusicStyleView : UIView
+@end
+
 
 #endif /* DYYYXiamuhook_h */

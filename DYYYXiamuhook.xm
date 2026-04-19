@@ -117,10 +117,13 @@
 %end
 
 // 隐藏音乐按钮上的同款/听抖音文字
-%hook AWEPlayInteractionStyleOneMusicView
-- (void)layoutSubviews {
-    %orig;
+@interface UIView (DYYYMusicTopTextHide)
+- (void)dyyy_hideMusicTopTextIfNeeded;
+@end
 
+@implementation UIView (DYYYMusicTopTextHide)
+
+- (void)dyyy_hideMusicTopTextIfNeeded {
     if (!DYYYGetBool(@"DYYYHideMusicTopText")) {
         return;
     }
@@ -132,6 +135,15 @@
 
         for (UIView *subview in currentView.subviews) {
             [stack addObject:subview];
+
+            NSString *accessibilityLabel = subview.accessibilityLabel;
+            BOOL matchAccessibilityText = [accessibilityLabel isKindOfClass:[NSString class]] && ([accessibilityLabel containsString:@"同款"] || [accessibilityLabel containsString:@"听"]);
+            BOOL matchContainerSize = subview.frame.size.width >= 40.0 && subview.frame.size.width <= 48.0 && subview.frame.size.height >= 40.0 && subview.frame.size.height <= 48.0;
+            if (matchAccessibilityText && matchContainerSize) {
+                subview.hidden = YES;
+                subview.alpha = 0.0;
+                subview.userInteractionEnabled = NO;
+            }
 
             if (![subview isKindOfClass:[UILabel class]]) {
                 continue;
@@ -151,8 +163,24 @@
             if (matchText && matchSize && matchPosition) {
                 label.hidden = YES;
                 label.alpha = 0.0;
+                label.userInteractionEnabled = NO;
             }
         }
     }
+}
+
+@end
+
+%hook AWEPlayInteractionStyleOneMusicView
+- (void)layoutSubviews {
+    %orig;
+    [self dyyy_hideMusicTopTextIfNeeded];
+}
+%end
+
+%hook AWEPlayInteractionSingleSongMusicStyleView
+- (void)layoutSubviews {
+    %orig;
+    [self dyyy_hideMusicTopTextIfNeeded];
 }
 %end
