@@ -4311,7 +4311,7 @@ static NSHashTable *processedParentViews = nil;
     self.hidden = NO;
     self.userInteractionEnabled = YES;
     for (UIView *subview in self.subviews) {
-        subview.alpha = shouldHideDiscover ? 0.02 : 1.0;
+        subview.alpha = shouldHideDiscover ? 0.0 : 1.0;
     }
 }
 
