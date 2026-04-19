@@ -1,13 +1,14 @@
 name: build deb
-run-name: ${{ github.event.inputs.display_name || github.workflow }}
+run-name: ${{ github.event.head_commit.message || github.event.inputs.display_name || github.workflow }}
 
 on:
+  push:
   workflow_dispatch:
     inputs:
       display_name:
         description: "运行名称（会显示在 Actions 列表）"
         required: false
-        default: "build deb"
+        default: ""
 
 jobs:
   build:
