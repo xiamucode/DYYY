@@ -101,3 +101,35 @@
     self.hidden = YES;
 }
 %end
+
+// 隐藏 iPad 右上搜索，但可点击
+%hook AWEPadSearchEntranceView
+- (void)layoutSubviews {
+    %orig;
+
+    BOOL shouldHideDiscover = DYYYGetBool(@"DYYYHideIPadDiscover");
+    self.hidden = NO;
+    self.userInteractionEnabled = YES;
+    for (UIView *subview in self.subviews) {
+        subview.alpha = shouldHideDiscover ? 0.0 : 1.0;
+    }
+}
+%end
+
+// 隐藏评论区搜索入口图标
+%hook UIImageView
+- (void)layoutSubviews {
+    %orig;
+    if (DYYYGetBool(@"DYYYHideCommentDiscover")) {
+        if (!self.accessibilityLabel) {
+            UIView *parentView = self.superview;
+
+            if (parentView && [parentView class] == [UIView class] && [parentView.accessibilityLabel isEqualToString:@"搜索"]) {
+                self.hidden = YES;
+            } else if (parentView && [NSStringFromClass([parentView class]) isEqualToString:@"AWESearchEntryHalfScreenElement"] && [parentView.accessibilityLabel isEqualToString:@"搜索"]) {
+                self.hidden = YES;
+            }
+        }
+    }
+}
+%end
