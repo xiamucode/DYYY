@@ -4097,23 +4097,6 @@ static NSHashTable *processedParentViews = nil;
         }
     }
 
-    if (DYYYGetBool(@"DYYYHideSearchSame")) {
-        UIViewController *viewController = [DYYYUtils firstAvailableViewControllerFromView:self];
-        if ([viewController isKindOfClass:%c(AWEPlayInteractionViewController)]) {
-            CGRect frame = self.frame;
-            BOOL matchSize = frame.size.width >= 30.0 && frame.size.width <= 45.0 && frame.size.height >= 12.0 && frame.size.height <= 18.0;
-            BOOL matchPosition = frame.origin.y >= 24.0 && frame.origin.y <= 36.0 && frame.origin.x >= 2.0 && frame.origin.x <= 16.0;
-            BOOL matchState = !self.userInteractionEnabled && self.alpha > 0.0 && !self.hidden;
-            NSString *text = self.text;
-            BOOL matchText = [text isKindOfClass:[NSString class]] && [text containsString:@"同款"];
-
-            if (matchSize && matchPosition && matchState && matchText) {
-                self.hidden = YES;
-                self.alpha = 0.0;
-                return;
-            }
-        }
-    }
 }
 %end
 

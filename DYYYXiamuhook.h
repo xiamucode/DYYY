@@ -7,5 +7,8 @@
 @interface AWESearchAIGCSummaryEntryView : UIView
 @end
 
+@interface AWEPlayInteractionStyleOneMusicView : UIView
+@end
+
 
 #endif /* DYYYXiamuhook_h */
