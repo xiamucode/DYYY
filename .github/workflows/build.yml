@@ -1,12 +1,7 @@
 name: build deb
 
 on:
-  push:
-    branches-ignore:
-      - dev
-  pull_request:
-    branches-ignore:
-      - dev
+  workflow_dispatch:
 
 jobs:
   build:
