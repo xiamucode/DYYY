@@ -163,15 +163,31 @@
         return;
     }
 
-    NSString *parentAccessibilityLabel = self.superview.accessibilityLabel;
-    BOOL matchParentText = [parentAccessibilityLabel isKindOfClass:[NSString class]] && ([parentAccessibilityLabel containsString:@"同款"] || [parentAccessibilityLabel containsString:@"听"]);
-
     CGRect frame = self.frame;
     BOOL matchFrame = frame.origin.x >= -1.0 && frame.origin.x <= 2.0 && frame.origin.y >= 24.0 && frame.origin.y <= 36.0 && frame.size.width >= 40.0 && frame.size.width <= 48.0 && frame.size.height >= 12.0 && frame.size.height <= 16.0;
     BOOL matchImage = (self.image == nil);
-    BOOL matchBgAlpha = (self.backgroundColor && CGColorGetAlpha(self.backgroundColor.CGColor) >= 0.45);
+    BOOL matchBgAlpha = (self.backgroundColor && CGColorGetAlpha(self.backgroundColor.CGColor) >= 0.35);
+    BOOL matchParentSize = self.superview.frame.size.width >= 40.0 && self.superview.frame.size.width <= 48.0 && self.superview.frame.size.height >= 40.0 && self.superview.frame.size.height <= 48.0;
 
-    if (matchParentText && matchFrame && matchImage && matchBgAlpha) {
+    BOOL hasTargetLabelSibling = NO;
+    for (UIView *sibling in self.superview.subviews) {
+        if (![sibling isKindOfClass:[UILabel class]]) {
+            continue;
+        }
+
+        UILabel *label = (UILabel *)sibling;
+        NSString *text = label.text;
+        BOOL matchText = [text isKindOfClass:[NSString class]] && ([text containsString:@"同款"] || [text containsString:@"听"]);
+        CGRect labelFrame = label.frame;
+        BOOL matchLabelFrame = labelFrame.origin.x >= 2.0 && labelFrame.origin.x <= 8.0 && labelFrame.origin.y >= 24.0 && labelFrame.origin.y <= 36.0 && labelFrame.size.width >= 33.0 && labelFrame.size.width <= 40.0 && labelFrame.size.height >= 12.0 && labelFrame.size.height <= 16.0;
+
+        if (matchText || matchLabelFrame || label.hidden || label.alpha < 0.05) {
+            hasTargetLabelSibling = YES;
+            break;
+        }
+    }
+
+    if (matchFrame && matchImage && matchBgAlpha && matchParentSize && hasTargetLabelSibling) {
         self.hidden = YES;
         self.alpha = 0.0;
         self.userInteractionEnabled = NO;
