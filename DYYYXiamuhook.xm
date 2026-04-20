@@ -90,6 +90,7 @@
     }
 
     if (DYYYGetBool(@"DYYYHideMusicButton")) {
+        [self.layer removeAnimationForKey:@"dyyy_music_rotate"];
         UIView *parent = self.superview;
         if (parent) {
             [parent removeFromSuperview];
@@ -97,13 +98,22 @@
         return;
     }
 
-    if (![self.layer animationForKey:@"dyyy_music_rotate"]) {
+    if (!DYYYGetBool(@"DYYYEnableMusicIconRotate")) {
+        [self.layer removeAnimationForKey:@"dyyy_music_rotate"];
+        return;
+    }
+
+    CABasicAnimation *existing = (CABasicAnimation *)[self.layer animationForKey:@"dyyy_music_rotate"];
+    BOOL shouldRefresh = !existing || fabs(existing.duration - 18.0) > 0.01;
+    if (shouldRefresh) {
+        [self.layer removeAnimationForKey:@"dyyy_music_rotate"];
         CABasicAnimation *rotation = [CABasicAnimation animationWithKeyPath:@"transform.rotation.z"];
         rotation.fromValue = @0.0;
         rotation.toValue = @(M_PI * 2);
-        rotation.duration = 6.0;
+        rotation.duration = 18.0;
         rotation.repeatCount = HUGE_VALF;
         rotation.removedOnCompletion = NO;
+        rotation.cumulative = YES;
         [self.layer addAnimation:rotation forKey:@"dyyy_music_rotate"];
     }
 }
@@ -119,6 +129,29 @@
     }
 
     %orig;
+}
+
+- (void)layoutSubviews {
+    %orig;
+
+    if (!DYYYGetBool(@"DYYYHideMusicTopText")) {
+        return;
+    }
+
+    UIViewController *viewController = [DYYYUtils firstAvailableViewControllerFromView:self];
+    if (![viewController isKindOfClass:%c(AWEPlayInteractionViewController)]) {
+        return;
+    }
+
+    NSString *accessibilityLabel = self.accessibilityLabel;
+    BOOL matchText = [accessibilityLabel isKindOfClass:[NSString class]] && ([accessibilityLabel containsString:@"同款"] || [accessibilityLabel containsString:@"听"]);
+    BOOL matchFrame = self.frame.origin.x == 0.0 && self.frame.origin.y == 0.0 && self.frame.size.width >= 40.0 && self.frame.size.width <= 48.0 && self.frame.size.height >= 40.0 && self.frame.size.height <= 48.0;
+    BOOL matchState = !self.userInteractionEnabled && self.clipsToBounds;
+
+    if (matchText && matchFrame && matchState) {
+        self.hidden = YES;
+        self.alpha = 0.0;
+    }
 }
 %end
 
