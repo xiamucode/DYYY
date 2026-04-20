@@ -1,5 +1,7 @@
 #import "AwemeHeaders.h"
 #import "DYYYUtils.h"
+#import <QuartzCore/QuartzCore.h>
+#import <math.h>
 
 // 资源下载地址优选
 %hook AWEURLModel
@@ -75,6 +77,35 @@
     CGRect f = view.frame;
     f.size.height = 0;
     view.frame = f;
+}
+%end
+
+%hook AWEMusicCoverButton
+- (void)layoutSubviews {
+    %orig;
+
+    NSString *accessibilityLabel = self.accessibilityLabel;
+    if (![accessibilityLabel isEqualToString:@"音乐详情"]) {
+        return;
+    }
+
+    if (DYYYGetBool(@"DYYYHideMusicButton")) {
+        UIView *parent = self.superview;
+        if (parent) {
+            [parent removeFromSuperview];
+        }
+        return;
+    }
+
+    if (![self.layer animationForKey:@"dyyy_music_rotate"]) {
+        CABasicAnimation *rotation = [CABasicAnimation animationWithKeyPath:@"transform.rotation.z"];
+        rotation.fromValue = @0.0;
+        rotation.toValue = @(M_PI * 2);
+        rotation.duration = 6.0;
+        rotation.repeatCount = HUGE_VALF;
+        rotation.removedOnCompletion = NO;
+        [self.layer addAnimation:rotation forKey:@"dyyy_music_rotate"];
+    }
 }
 %end
 
