@@ -89,29 +89,6 @@
 
     %orig;
 }
-
-- (void)layoutSubviews {
-    %orig;
-
-    if (!DYYYGetBool(@"DYYYHideMusicTopText")) {
-        return;
-    }
-
-    UIViewController *viewController = [DYYYUtils firstAvailableViewControllerFromView:self];
-    if (![viewController isKindOfClass:%c(AWEPlayInteractionViewController)]) {
-        return;
-    }
-
-    NSString *accessibilityLabel = self.accessibilityLabel;
-    BOOL matchText = [accessibilityLabel isKindOfClass:[NSString class]] && ([accessibilityLabel containsString:@"同款"] || [accessibilityLabel containsString:@"听"]);
-    BOOL matchSelfFrame = self.frame.origin.x == 0.0 && self.frame.origin.y == 0.0 && self.frame.size.width >= 40.0 && self.frame.size.width <= 48.0 && self.frame.size.height >= 40.0 && self.frame.size.height <= 48.0;
-    BOOL matchState = !self.userInteractionEnabled && self.clipsToBounds;
-    if (!(matchText && matchSelfFrame && matchState)) {
-        return;
-    }
-    self.hidden = YES;
-    self.alpha = 0.0;
-}
 %end
 
 // 隐藏音乐按钮上方文字（拍同款/玩同款/听抖音等）
@@ -135,6 +112,48 @@
     BOOL matchPosition = frame.origin.x >= 2.0 && frame.origin.x <= 8.0 && frame.origin.y >= 24.0 && frame.origin.y <= 36.0;
 
     if (matchText && matchSize && matchPosition) {
+        self.hidden = YES;
+        self.alpha = 0.0;
+        self.userInteractionEnabled = NO;
+    }
+}
+%end
+
+// 隐藏音乐文案底部阴影条，避免影响唱片旋转
+%hook UIImageView
+- (void)layoutSubviews {
+    %orig;
+
+    if (!DYYYGetBool(@"DYYYHideMusicTopText")) {
+        return;
+    }
+
+    UIViewController *viewController = [DYYYUtils firstAvailableViewControllerFromView:self];
+    if (![viewController isKindOfClass:%c(AWEPlayInteractionViewController)]) {
+        return;
+    }
+
+    CGRect frame = self.frame;
+    BOOL matchFrame = frame.origin.x >= -1.0 && frame.origin.x <= 2.0 && frame.origin.y >= 24.0 && frame.origin.y <= 36.0 && frame.size.width >= 40.0 && frame.size.width <= 48.0 && frame.size.height >= 12.0 && frame.size.height <= 16.0;
+    BOOL matchImage = (self.image == nil);
+    BOOL matchBgAlpha = (self.backgroundColor && CGColorGetAlpha(self.backgroundColor.CGColor) >= 0.35);
+    BOOL matchParentSize = self.superview.frame.size.width >= 40.0 && self.superview.frame.size.width <= 48.0 && self.superview.frame.size.height >= 40.0 && self.superview.frame.size.height <= 48.0;
+
+    BOOL hasTargetLabelSibling = NO;
+    for (UIView *sibling in self.superview.subviews) {
+        if (![sibling isKindOfClass:[UILabel class]]) {
+            continue;
+        }
+        UILabel *label = (UILabel *)sibling;
+        NSString *text = label.text;
+        BOOL matchText = [text isKindOfClass:[NSString class]] && ([text containsString:@"同款"] || [text containsString:@"听"]);
+        if (matchText || label.hidden || label.alpha < 0.05) {
+            hasTargetLabelSibling = YES;
+            break;
+        }
+    }
+
+    if (matchFrame && matchImage && matchBgAlpha && matchParentSize && hasTargetLabelSibling) {
         self.hidden = YES;
         self.alpha = 0.0;
         self.userInteractionEnabled = NO;
