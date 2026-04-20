@@ -1,7 +1,5 @@
 #import "AwemeHeaders.h"
 #import "DYYYUtils.h"
-#import <QuartzCore/QuartzCore.h>
-#import <math.h>
 
 // 资源下载地址优选
 %hook AWEURLModel
@@ -80,41 +78,6 @@
 }
 %end
 
-%hook AWEMusicCoverButton
-- (void)layoutSubviews {
-    %orig;
-
-    UIViewController *viewController = [DYYYUtils firstAvailableViewControllerFromView:self];
-    if (![viewController isKindOfClass:%c(AWEPlayInteractionViewController)]) {
-        return;
-    }
-
-    if (DYYYGetBool(@"DYYYHideMusicButton")) {
-        [self.layer removeAnimationForKey:@"dyyy_music_rotate"];
-        UIView *parent = self.superview;
-        if (parent) {
-            [parent removeFromSuperview];
-        }
-        return;
-    }
-
-    if (!DYYYGetBool(@"DYYYEnableMusicIconRotate")) {
-        [self.layer removeAnimationForKey:@"dyyy_music_rotate"];
-        return;
-    }
-
-    [self.layer removeAnimationForKey:@"dyyy_music_rotate"];
-    CABasicAnimation *rotation = [CABasicAnimation animationWithKeyPath:@"transform.rotation.z"];
-    rotation.fromValue = @0.0;
-    rotation.toValue = @(M_PI * 2);
-    rotation.duration = 18.0;
-    rotation.repeatCount = HUGE_VALF;
-    rotation.removedOnCompletion = NO;
-    rotation.cumulative = YES;
-    [self.layer addAnimation:rotation forKey:@"dyyy_music_rotate"];
-}
-%end
-
 // 隐藏搜索后的 AI 搜索
 %hook UIView
 - (void)addSubview:(UIView *)view {
@@ -142,9 +105,7 @@
     NSString *accessibilityLabel = self.accessibilityLabel;
     BOOL matchText = [accessibilityLabel isKindOfClass:[NSString class]] && ([accessibilityLabel containsString:@"同款"] || [accessibilityLabel containsString:@"听"]);
     BOOL matchFrame = self.frame.origin.x >= 0.0 && self.frame.origin.x <= 16.0 && self.frame.origin.y == 0.0 && self.frame.size.width >= 40.0 && self.frame.size.width <= 48.0 && self.frame.size.height >= 40.0 && self.frame.size.height <= 48.0;
-    BOOL matchState = !self.userInteractionEnabled && self.clipsToBounds;
-
-    if (matchText && matchFrame && matchState) {
+    if (matchText && matchFrame) {
         self.hidden = YES;
         self.alpha = 0.0;
     }
@@ -168,8 +129,8 @@
     NSString *text = self.text;
     BOOL matchText = [text isKindOfClass:[NSString class]] && ([text containsString:@"同款"] || [text containsString:@"听"]);
     CGRect frame = self.frame;
-    BOOL matchSize = frame.size.width >= 33.0 && frame.size.width <= 40.0 && frame.size.height >= 12.0 && frame.size.height <= 16.0;
-    BOOL matchPosition = frame.origin.x >= 2.0 && frame.origin.x <= 16.0 && frame.origin.y >= 24.0 && frame.origin.y <= 36.0;
+    BOOL matchSize = frame.size.width >= 30.0 && frame.size.width <= 90.0 && frame.size.height >= 12.0 && frame.size.height <= 18.0;
+    BOOL matchPosition = frame.origin.x >= 2.0 && frame.origin.x <= 20.0 && frame.origin.y >= 24.0 && frame.origin.y <= 36.0;
 
     if (matchText && matchSize && matchPosition) {
         self.hidden = YES;

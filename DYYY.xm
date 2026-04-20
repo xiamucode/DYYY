@@ -3603,6 +3603,22 @@ static NSArray *DYYYIMMenuItemsByAddingDownloadAction(NSArray *menuItems, id cel
 }
 %end
 
+%hook AWEMusicCoverButton
+- (void)layoutSubviews {
+    %orig;
+    NSString *accessibilityLabel = self.accessibilityLabel;
+    if ([accessibilityLabel isEqualToString:@"音乐详情"]) {
+        if (DYYYGetBool(@"DYYYHideMusicButton")) {
+            UIView *parent = self.superview;
+            if (parent) {
+                [parent removeFromSuperview];
+            }
+            return;
+        }
+    }
+}
+%end
+
 %hook AWEPlayInteractionListenFeedView
 - (void)layoutSubviews {
     %orig;
