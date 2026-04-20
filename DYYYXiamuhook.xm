@@ -84,8 +84,8 @@
 - (void)layoutSubviews {
     %orig;
 
-    NSString *accessibilityLabel = self.accessibilityLabel;
-    if (![accessibilityLabel isEqualToString:@"音乐详情"]) {
+    UIViewController *viewController = [DYYYUtils firstAvailableViewControllerFromView:self];
+    if (![viewController isKindOfClass:%c(AWEPlayInteractionViewController)]) {
         return;
     }
 
@@ -103,19 +103,15 @@
         return;
     }
 
-    CABasicAnimation *existing = (CABasicAnimation *)[self.layer animationForKey:@"dyyy_music_rotate"];
-    BOOL shouldRefresh = !existing || fabs(existing.duration - 18.0) > 0.01;
-    if (shouldRefresh) {
-        [self.layer removeAnimationForKey:@"dyyy_music_rotate"];
-        CABasicAnimation *rotation = [CABasicAnimation animationWithKeyPath:@"transform.rotation.z"];
-        rotation.fromValue = @0.0;
-        rotation.toValue = @(M_PI * 2);
-        rotation.duration = 18.0;
-        rotation.repeatCount = HUGE_VALF;
-        rotation.removedOnCompletion = NO;
-        rotation.cumulative = YES;
-        [self.layer addAnimation:rotation forKey:@"dyyy_music_rotate"];
-    }
+    [self.layer removeAnimationForKey:@"dyyy_music_rotate"];
+    CABasicAnimation *rotation = [CABasicAnimation animationWithKeyPath:@"transform.rotation.z"];
+    rotation.fromValue = @0.0;
+    rotation.toValue = @(M_PI * 2);
+    rotation.duration = 18.0;
+    rotation.repeatCount = HUGE_VALF;
+    rotation.removedOnCompletion = NO;
+    rotation.cumulative = YES;
+    [self.layer addAnimation:rotation forKey:@"dyyy_music_rotate"];
 }
 %end
 
@@ -145,7 +141,7 @@
 
     NSString *accessibilityLabel = self.accessibilityLabel;
     BOOL matchText = [accessibilityLabel isKindOfClass:[NSString class]] && ([accessibilityLabel containsString:@"同款"] || [accessibilityLabel containsString:@"听"]);
-    BOOL matchFrame = self.frame.origin.x == 0.0 && self.frame.origin.y == 0.0 && self.frame.size.width >= 40.0 && self.frame.size.width <= 48.0 && self.frame.size.height >= 40.0 && self.frame.size.height <= 48.0;
+    BOOL matchFrame = self.frame.origin.x >= 0.0 && self.frame.origin.x <= 16.0 && self.frame.origin.y == 0.0 && self.frame.size.width >= 40.0 && self.frame.size.width <= 48.0 && self.frame.size.height >= 40.0 && self.frame.size.height <= 48.0;
     BOOL matchState = !self.userInteractionEnabled && self.clipsToBounds;
 
     if (matchText && matchFrame && matchState) {
@@ -173,7 +169,7 @@
     BOOL matchText = [text isKindOfClass:[NSString class]] && ([text containsString:@"同款"] || [text containsString:@"听"]);
     CGRect frame = self.frame;
     BOOL matchSize = frame.size.width >= 33.0 && frame.size.width <= 40.0 && frame.size.height >= 12.0 && frame.size.height <= 16.0;
-    BOOL matchPosition = frame.origin.x >= 2.0 && frame.origin.x <= 8.0 && frame.origin.y >= 24.0 && frame.origin.y <= 36.0;
+    BOOL matchPosition = frame.origin.x >= 2.0 && frame.origin.x <= 16.0 && frame.origin.y >= 24.0 && frame.origin.y <= 36.0;
 
     if (matchText && matchSize && matchPosition) {
         self.hidden = YES;
