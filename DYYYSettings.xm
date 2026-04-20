@@ -144,6 +144,7 @@ static NSArray<NSDictionary<NSString *, NSString *> *> *DYYYSearchManifest(void)
         @{@"category": @"隐藏设置", @"section": @"视频播放界面", @"title": @"隐藏头像光圈"},
         @{@"category": @"隐藏设置", @"section": @"视频播放界面", @"title": @"隐藏头像直播提示"},
         @{@"category": @"隐藏设置", @"section": @"视频播放界面", @"title": @"隐藏音乐按钮"},
+        @{@"category": @"隐藏设置", @"section": @"视频播放界面", @"title": @"隐藏音乐上文字"},
         @{@"category": @"隐藏设置", @"section": @"视频播放界面", @"title": @"隐藏遮罩效果"},
         @{@"category": @"隐藏设置", @"section": @"视频播放界面", @"title": @"隐藏返回按钮"},
         @{@"category": @"隐藏设置", @"section": @"视频播放界面", @"title": @"隐藏转发日常"},
@@ -435,6 +436,7 @@ static NSDictionary<NSString *, NSDictionary *> *DYYYSearchInteractionMetadata(v
             @"隐藏设置|视频播放界面|隐藏头像光圈": @{@"identifier": @"DYYYHideAvatarRing", @"title": @"隐藏头像光圈", @"cellType": @6, @"imageName": @"ic_eyeslash_outlined_16"},
             @"隐藏设置|视频播放界面|隐藏头像直播提示": @{@"identifier": @"DYYYHideAvatarLive", @"title": @"隐藏头像直播提示", @"cellType": @6, @"imageName": @"ic_eyeslash_outlined_16"},
             @"隐藏设置|视频播放界面|隐藏音乐按钮": @{@"identifier": @"DYYYHideMusicButton", @"title": @"隐藏音乐按钮", @"cellType": @6, @"imageName": @"ic_eyeslash_outlined_16"},
+            @"隐藏设置|视频播放界面|隐藏音乐上文字": @{@"identifier": @"DYYYHideMusicTopText", @"title": @"隐藏音乐上文字", @"cellType": @37, @"subTitle": @"隐藏拍同款，玩同款，听抖音，等等", @"imageName": @"ic_eyeslash_outlined_16"},
             @"隐藏设置|视频播放界面|隐藏遮罩效果": @{@"identifier": @"DYYYHideGradient", @"title": @"隐藏遮罩效果", @"cellType": @37, @"subTitle": @"移除视频文案或图片滑条可能出现的黑色背景遮罩效果，但可能对部分视频的文案可读性产生一定影响。", @"imageName": @"ic_eyeslash_outlined_16"},
             @"隐藏设置|视频播放界面|隐藏返回按钮": @{@"identifier": @"DYYYHideBack", @"title": @"隐藏返回按钮", @"cellType": @37, @"subTitle": @"主页视频左上角的返回按钮", @"imageName": @"ic_eyeslash_outlined_16"},
             @"隐藏设置|视频播放界面|隐藏转发日常": @{@"identifier": @"DYYYHideShareToDailyBottomButton", @"title": @"隐藏转发日常", @"cellType": @6, @"imageName": @"ic_eyeslash_outlined_16"},
@@ -738,6 +740,7 @@ static void DYYYRemoveRemoteConfigObserver(void) {
         dyyyRemoteConfigChangedToken = nil;
     }
 }
+
 %hook AWESettingBaseViewController
 - (BOOL)useCardUIStyle {
     return YES;
@@ -764,7 +767,6 @@ static void DYYYRemoveRemoteConfigObserver(void) {
     %orig;
 }
 
-%new
 - (void)dyyy_scrollToSearchTargetIfNeeded {
     NSString *targetTitle = objc_getAssociatedObject(self, &kDYYYSearchTargetTitleKey);
     if (targetTitle.length == 0) {
@@ -2110,6 +2112,12 @@ void showDYYYSettingsVC(UIViewController *rootVC, BOOL hasAgreed) {
             @"title" : @"隐藏音乐按钮",
             @"detail" : @"",
             @"cellType" : @6,
+            @"imageName" : @"ic_eyeslash_outlined_16"},
+          @{@"identifier" : @"DYYYHideMusicTopText",
+            @"title" : @"隐藏音乐上文字",
+            @"subTitle" : @"隐藏拍同款，玩同款，听抖音，等等",
+            @"detail" : @"",
+            @"cellType" : @37,
             @"imageName" : @"ic_eyeslash_outlined_16"},
           @{
               @"identifier" : @"DYYYHideGradient",

@@ -1,4 +1,5 @@
 #import "AwemeHeaders.h"
+#import "DYYYUtils.h"
 
 // 资源下载地址优选
 %hook AWEURLModel
@@ -88,6 +89,57 @@
 
     %orig;
 }
+
+- (void)layoutSubviews {
+    %orig;
+
+    if (!DYYYGetBool(@"DYYYHideMusicTopText")) {
+        return;
+    }
+
+    UIViewController *viewController = [DYYYUtils firstAvailableViewControllerFromView:self];
+    if (![viewController isKindOfClass:%c(AWEPlayInteractionViewController)]) {
+        return;
+    }
+
+    NSString *accessibilityLabel = self.accessibilityLabel;
+    BOOL matchText = [accessibilityLabel isKindOfClass:[NSString class]] && ([accessibilityLabel containsString:@"同款"] || [accessibilityLabel containsString:@"听"]);
+    BOOL matchSelfFrame = self.frame.origin.x == 0.0 && self.frame.origin.y == 0.0 && self.frame.size.width >= 40.0 && self.frame.size.width <= 48.0 && self.frame.size.height >= 40.0 && self.frame.size.height <= 48.0;
+    BOOL matchState = !self.userInteractionEnabled && self.clipsToBounds;
+    if (!(matchText && matchSelfFrame && matchState)) {
+        return;
+    }
+    self.hidden = YES;
+    self.alpha = 0.0;
+}
+%end
+
+// 隐藏音乐按钮上方文字（拍同款/玩同款/听抖音等）
+%hook UILabel
+- (void)layoutSubviews {
+    %orig;
+
+    if (!DYYYGetBool(@"DYYYHideMusicTopText")) {
+        return;
+    }
+
+    UIViewController *viewController = [DYYYUtils firstAvailableViewControllerFromView:self];
+    if (![viewController isKindOfClass:%c(AWEPlayInteractionViewController)]) {
+        return;
+    }
+
+    NSString *text = self.text;
+    BOOL matchText = [text isKindOfClass:[NSString class]] && ([text containsString:@"同款"] || [text containsString:@"听"]);
+    CGRect frame = self.frame;
+    BOOL matchSize = frame.size.width >= 33.0 && frame.size.width <= 40.0 && frame.size.height >= 12.0 && frame.size.height <= 16.0;
+    BOOL matchPosition = frame.origin.x >= 2.0 && frame.origin.x <= 8.0 && frame.origin.y >= 24.0 && frame.origin.y <= 36.0;
+
+    if (matchText && matchSize && matchPosition) {
+        self.hidden = YES;
+        self.alpha = 0.0;
+        self.userInteractionEnabled = NO;
+    }
+}
 %end
 
 %hook AWESearchAIGCSummaryEntryView
@@ -99,5 +151,19 @@
 - (void)layoutSubviews {
     %orig;
     self.hidden = YES;
+}
+%end
+
+// 隐藏 iPad 右上搜索，但可点击
+%hook AWEPadSearchEntranceView
+- (void)layoutSubviews {
+    %orig;
+
+    BOOL shouldHideDiscover = DYYYGetBool(@"DYYYHideIPadDiscover");
+    self.hidden = NO;
+    self.userInteractionEnabled = YES;
+    for (UIView *subview in self.subviews) {
+        subview.alpha = shouldHideDiscover ? 0.0 : 1.0;
+    }
 }
 %end
