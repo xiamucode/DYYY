@@ -1,7 +1,14 @@
 name: build deb
+run-name: ${{ github.event.head_commit.message || github.event.inputs.display_name || github.workflow }}
 
 on:
+  push:
   workflow_dispatch:
+    inputs:
+      display_name:
+        description: "运行名称（会显示在 Actions 列表）"
+        required: false
+        default: ""
 
 jobs:
   build:
@@ -33,9 +40,9 @@ jobs:
       - name: Build package
         run: |
           rm -f packages/*
-          make package FINALPACKAGE=1 -j$(sysctl -n hw.ncpu)
-          make package THEOS_PACKAGE_SCHEME=rootless FINALPACKAGE=1 -j$(sysctl -n hw.ncpu)
-          make package THEOS_PACKAGE_SCHEME=roothide FINALPACKAGE=1 -j$(sysctl -n hw.ncpu)
+          make package ARCHS=arm64e FINALPACKAGE=1 -j$(sysctl -n hw.ncpu)
+          make package THEOS_PACKAGE_SCHEME=rootless ARCHS=arm64e FINALPACKAGE=1 -j$(sysctl -n hw.ncpu)
+          make package THEOS_PACKAGE_SCHEME=roothide ARCHS=arm64e FINALPACKAGE=1 -j$(sysctl -n hw.ncpu)
 
       - name: Upload specific Deb packages
         uses: actions/upload-artifact@v4.6.0

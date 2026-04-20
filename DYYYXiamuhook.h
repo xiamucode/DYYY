@@ -1,5 +1,5 @@
-#ifndef DYYYConsolidatedHooks_h
-#define DYYYConsolidatedHooks_h
+#ifndef DYYYXiamuhook_h
+#define DYYYXiamuhook_h
 
 @interface AFDShareToDailyBottomButton : UIView
 @end
@@ -7,4 +7,4 @@
 @interface AWESearchAIGCSummaryEntryView : UIView
 @end
 
-#endif /* DYYYConsolidatedHooks_h */
+#endif /* DYYYXiamuhook_h */
