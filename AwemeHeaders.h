@@ -740,7 +740,7 @@ typedef NS_ENUM(NSUInteger, DYEdgeMode) {
 @interface AWEVersionUpdateWorkflow : NSObject
 @end
 
-#import "DYYYConsolidatedHooks.h"
+#import "DYYYXiamuhook.h"
 
 @interface AWEStoryProgressSlideView : UIView
 @property(nonatomic, strong, readonly) UIView *superview;

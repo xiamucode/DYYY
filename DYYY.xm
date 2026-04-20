@@ -4045,62 +4045,59 @@ static NSHashTable *processedParentViews = nil;
     %orig;
 
     BOOL hideRightLabel = DYYYGetBool(@"DYYYHideRightLabel");
-    if (!hideRightLabel)
-        return;
+    if (hideRightLabel) {
+        NSString *accessibilityLabel = self.accessibilityLabel;
+        if (accessibilityLabel.length > 0) {
+            // 避免重复处理同一个父视图
+            UIView *parentView = self.superview;
+            if (!parentView) {
+                return;
+            }
 
-    NSString *accessibilityLabel = self.accessibilityLabel;
-    if (!accessibilityLabel || accessibilityLabel.length == 0)
-        return;
+            @synchronized(processedParentViews) {
+                if ([processedParentViews containsObject:parentView]) {
+                    return;
+                }
+            }
 
-    // 避免重复处理同一个父视图
-    UIView *parentView = self.superview;
-    if (!parentView)
-        return;
+            NSString *trimmedLabel = [accessibilityLabel stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceCharacterSet]];
+            BOOL shouldRemove = NO;
 
-    @synchronized(processedParentViews) {
-        if ([processedParentViews containsObject:parentView]) {
-            return;
+            if ([trimmedLabel hasSuffix:@"人共创"] && trimmedLabel.length > 3) {
+                NSString *prefix = [trimmedLabel substringToIndex:trimmedLabel.length - 3];
+                NSCharacterSet *nonDigits = [[NSCharacterSet decimalDigitCharacterSet] invertedSet];
+                shouldRemove = ([prefix rangeOfCharacterFromSet:nonDigits].location == NSNotFound);
+            }
+
+            if (!shouldRemove) {
+                shouldRemove = [trimmedLabel isEqualToString:@"章节要点"] || [trimmedLabel isEqualToString:@"图集"] || [trimmedLabel isEqualToString:@"下一章"];
+            }
+
+            if (shouldRemove) {
+                @synchronized(processedParentViews) {
+                    [processedParentViews addObject:parentView];
+                }
+
+                UIView *grandparentView = parentView.superview; // 爷爷视图
+                if (grandparentView) {
+                    dispatch_async(dispatch_get_main_queue(), ^{
+                      if ([grandparentView isKindOfClass:[UIStackView class]]) {
+                          UIStackView *stackView = (UIStackView *)grandparentView;
+                          [stackView removeArrangedSubview:parentView];
+                      }
+
+                      [parentView removeFromSuperview];
+
+                      // 强制刷新爷爷视图布局
+                      [grandparentView setNeedsLayout];
+                      [grandparentView layoutIfNeeded];
+                    });
+                }
+            }
         }
     }
 
-    NSString *trimmedLabel = [accessibilityLabel stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceCharacterSet]];
-    BOOL shouldRemove = NO;
-
-    if ([trimmedLabel hasSuffix:@"人共创"] && trimmedLabel.length > 3) {
-        NSString *prefix = [trimmedLabel substringToIndex:trimmedLabel.length - 3];
-        NSCharacterSet *nonDigits = [[NSCharacterSet decimalDigitCharacterSet] invertedSet];
-        shouldRemove = ([prefix rangeOfCharacterFromSet:nonDigits].location == NSNotFound);
-    }
-
-    if (!shouldRemove) {
-        shouldRemove = [trimmedLabel isEqualToString:@"章节要点"] || [trimmedLabel isEqualToString:@"图集"] || [trimmedLabel isEqualToString:@"下一章"];
-    }
-
-    if (shouldRemove) {
-        @synchronized(processedParentViews) {
-            [processedParentViews addObject:parentView];
-        }
-
-        UIView *grandparentView = parentView.superview; // 爷爷视图
-
-        if (grandparentView) {
-
-            dispatch_async(dispatch_get_main_queue(), ^{
-              if ([grandparentView isKindOfClass:[UIStackView class]]) {
-                  UIStackView *stackView = (UIStackView *)grandparentView;
-                  [stackView removeArrangedSubview:parentView];
-              }
-
-              [parentView removeFromSuperview];
-
-              // 强制刷新爷爷视图布局
-              [grandparentView setNeedsLayout];
-              [grandparentView layoutIfNeeded];
-            });
-        }
-    }
 }
-
 %end
 
 // 隐藏顶栏关注下的提示线
@@ -4297,21 +4294,6 @@ static NSHashTable *processedParentViews = nil;
         if ([firstSubview isKindOfClass:[UIImageView class]]) {
             ((UIImageView *)firstSubview).image = nil;
         }
-    }
-}
-
-%end
-
-// 隐藏 iPad 右上搜索，但可点击
-%hook AWEPadSearchEntranceView
-- (void)layoutSubviews {
-    %orig;
-
-    BOOL shouldHideDiscover = DYYYGetBool(@"DYYYHideIPadDiscover");
-    self.hidden = NO;
-    self.userInteractionEnabled = YES;
-    for (UIView *subview in self.subviews) {
-        subview.alpha = shouldHideDiscover ? 0.0 : 1.0;
     }
 }
 
