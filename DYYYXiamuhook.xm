@@ -106,7 +106,11 @@
     NSString *superviewClassName = NSStringFromClass([self.superview class]);
     BOOL isMusicContainerClass = [className containsString:@"PlayInteractionStyleOneMusic"] || [className containsString:@"PlayInteractionSingleSongMusicStyle"] || [className containsString:@"MusicCoverButton"];
     BOOL isMusicContainerSuperview = [superviewClassName containsString:@"PlayInteractionStyleOneMusic"] || [superviewClassName containsString:@"PlayInteractionSingleSongMusicStyle"] || [superviewClassName containsString:@"MusicCoverButton"];
-    BOOL matchSelfFrame = self.frame.origin.x == 0.0 && self.frame.origin.y == 0.0 && self.frame.size.width >= 40.0 && self.frame.size.width <= 48.0 && self.frame.size.height >= 40.0 && self.frame.size.height <= 48.0;
+    CGRect selfFrame = self.frame;
+    BOOL matchIPhoneSelfFrame = selfFrame.origin.x == 0.0 && selfFrame.origin.y == 0.0 && selfFrame.size.width >= 40.0 && selfFrame.size.width <= 48.0 && selfFrame.size.height >= 40.0 && selfFrame.size.height <= 48.0;
+    // iPad 下“拍同款”容器常见坐标：{11, 0, 44, 44}
+    BOOL matchIPadSelfFrame = selfFrame.origin.x >= 10.0 && selfFrame.origin.x <= 12.5 && selfFrame.origin.y >= -0.5 && selfFrame.origin.y <= 0.5 && selfFrame.size.width >= 40.0 && selfFrame.size.width <= 48.0 && selfFrame.size.height >= 40.0 && selfFrame.size.height <= 48.0;
+    BOOL matchSelfFrame = matchIPhoneSelfFrame || matchIPadSelfFrame;
     BOOL matchState = !self.userInteractionEnabled && self.clipsToBounds;
     if (!((isMusicContainerClass || isMusicContainerSuperview) && matchSelfFrame && matchState)) {
         return;
@@ -154,8 +158,19 @@
     NSString *text = self.text;
     BOOL matchText = [text isKindOfClass:[NSString class]] && ([text containsString:@"同款"] || [text containsString:@"听"]);
     CGRect frame = self.frame;
-    BOOL matchSize = frame.size.width >= 33.0 && frame.size.width <= 40.0 && frame.size.height >= 12.0 && frame.size.height <= 16.0;
-    BOOL matchPosition = frame.origin.x >= 2.0 && frame.origin.x <= 8.0 && frame.origin.y >= 24.0 && frame.origin.y <= 36.0;
+    BOOL matchSizeIPhone = frame.size.width >= 33.0 && frame.size.width <= 40.0 && frame.size.height >= 12.0 && frame.size.height <= 16.0;
+    BOOL matchPositionIPhone = frame.origin.x >= 2.0 && frame.origin.x <= 8.0 && frame.origin.y >= 24.0 && frame.origin.y <= 36.0;
+
+    // iPad “拍同款”：{14.5, 29.5, 37, 14.5}
+    BOOL matchSizeIPadTongKuan = frame.size.width >= 35.0 && frame.size.width <= 39.5 && frame.size.height >= 13.0 && frame.size.height <= 16.0;
+    BOOL matchPositionIPadTongKuan = frame.origin.x >= 13.0 && frame.origin.x <= 16.5 && frame.origin.y >= 28.0 && frame.origin.y <= 31.5;
+
+    // iPad “听抖音”：{17.5, 31, 31, 13}
+    BOOL matchSizeIPadTingDouYin = frame.size.width >= 29.0 && frame.size.width <= 33.0 && frame.size.height >= 12.0 && frame.size.height <= 14.5;
+    BOOL matchPositionIPadTingDouYin = frame.origin.x >= 16.0 && frame.origin.x <= 19.5 && frame.origin.y >= 29.5 && frame.origin.y <= 33.0;
+
+    BOOL matchSize = matchSizeIPhone || matchSizeIPadTongKuan || matchSizeIPadTingDouYin;
+    BOOL matchPosition = matchPositionIPhone || matchPositionIPadTongKuan || matchPositionIPadTingDouYin;
 
     if (matchText && matchSize && matchPosition) {
         self.hidden = YES;
